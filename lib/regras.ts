@@ -8,6 +8,7 @@ import {
   LinhaMovimentacaoNCM,
   LinhaSaidasGrupoEconomico,
   ResultadoAnalise,
+  ResultadoRequisito,
   DetalheReq4,
   DetalheReq5,
   DetalheReq6,
@@ -88,7 +89,7 @@ function verificarReq4(linhas: LinhaFaturamentoMensal[]) {
     maior_sequencia: maiorSequencia,
   }
 
-  return { resultado: aprovado ? 'aprovado' : 'reprovado' as const, detalhe }
+  return { resultado: (aprovado ? 'aprovado' : 'reprovado') as ResultadoRequisito, detalhe }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -125,7 +126,7 @@ function verificarReq5(linhas: LinhaFaturamentoMensal[]) {
     periodo_referencia: periodoRef,
   }
 
-  return { resultado: aprovado ? 'aprovado' : 'reprovado' as const, detalhe }
+  return { resultado: (aprovado ? 'aprovado' : 'reprovado') as ResultadoRequisito, detalhe }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -162,7 +163,7 @@ function verificarReq6(linhas: LinhaMovimentacaoNCM[]) {
     minimo_exigido: PERCENTUAL_MINIMO_PRIORITARIOS,
   }
 
-  return { resultado: aprovado ? 'aprovado' : 'reprovado' as const, detalhe }
+  return { resultado: (aprovado ? 'aprovado' : 'reprovado') as ResultadoRequisito, detalhe }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -221,7 +222,7 @@ function verificarReq7(
     minimo_exigido: PERCENTUAL_MINIMO_AGREGACAO,
   }
 
-  return { resultado: aprovado ? 'aprovado' : 'reprovado' as const, detalhe }
+  return { resultado: (aprovado ? 'aprovado' : 'reprovado') as ResultadoRequisito, detalhe }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
