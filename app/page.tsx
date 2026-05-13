@@ -10,51 +10,6 @@ import {
 } from '@/lib/types'
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Documentos formais (PDFs)
-// ──────────────────────────────────────────────────────────────────────────────
-
-type DocKey = 'contratoSocial' | 'docsSocios' | 'imovel' | 'comprovanteEndereco' | 'irSocios' | 'raisGfip' | 'contratoContador' | 'licencaAnvisa'
-const DOC_KEYS: DocKey[] = ['contratoSocial', 'docsSocios', 'imovel', 'comprovanteEndereco', 'irSocios', 'raisGfip', 'contratoContador', 'licencaAnvisa']
-const DOC_LABELS: Record<DocKey, { label: string; sub: string }> = {
-  contratoSocial:      { label: 'Contrato Social',                            sub: 'Objeto social e constituição da empresa' },
-  docsSocios:          { label: 'Docs. Pessoais dos Sócios/Diretores',        sub: 'RG, CPF, CNH ou passaporte' },
-  imovel:              { label: 'Registro de Imóvel ou Contrato de Locação',  sub: 'Endereço do estabelecimento' },
-  comprovanteEndereco: { label: 'Comprovante de Endereço',                    sub: 'Conta de energia ou similar (mês anterior ao pedido)' },
-  irSocios:            { label: 'Imposto de Renda dos Sócios (3 últimos)',    sub: 'Pode ser um único PDF com todos os IRs' },
-  raisGfip:            { label: 'RAIS ou GFIP',                               sub: 'Quadro de funcionários CLT' },
-  contratoContador:    { label: 'Contrato do Contador + DHP',                 sub: 'Vigência atual do contrato e habilitação profissional' },
-  licencaAnvisa:       { label: 'Licença ANVISA',                             sub: 'Autorização de funcionamento vigente' },
-}
-
-function PdfDropZone({ label, sublabel, arquivo, onFile }: {
-  label: string; sublabel: string; arquivo: File | null; onFile: (f: File) => void
-}) {
-  const ref = useRef<HTMLInputElement>(null)
-  const [drag, setDrag] = useState(false)
-  const handle = (f: File | undefined) => { if (f && f.name.toLowerCase().endsWith('.pdf')) onFile(f) }
-  return (
-    <div
-      className={`relative border-2 border-dashed rounded-lg p-3 transition-colors cursor-pointer
-        ${drag ? 'border-sefaz-blue bg-blue-50' : arquivo ? 'border-green-400 bg-green-50' : 'border-gray-300 bg-white hover:border-sefaz-blue'}`}
-      onDragOver={e => { e.preventDefault(); setDrag(true) }}
-      onDragLeave={() => setDrag(false)}
-      onDrop={e => { e.preventDefault(); setDrag(false); handle(e.dataTransfer.files[0]) }}
-      onClick={() => ref.current?.click()}
-    >
-      <input ref={ref} type="file" accept=".pdf" className="hidden" onChange={e => handle(e.target.files?.[0])} />
-      <div className="flex items-start gap-2">
-        <span className={`text-lg mt-0.5 ${arquivo ? 'text-green-500' : 'text-gray-400'}`}>{arquivo ? '✅' : '📄'}</span>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-gray-700 leading-tight">{label}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{sublabel}</p>
-          {arquivo && <p className="text-xs text-green-600 mt-0.5 font-medium truncate">{arquivo.name}</p>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
 // Helpers de parsing de CSV
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -380,9 +335,6 @@ export default function HomePage() {
   const [grupoEconomico, setGrupo]         = useState(false)
   const [cnpjsGrupo, setCnpjsGrupo]        = useState<string[]>([''])
 
-  const [pdfs, setPdfs] = useState<Partial<Record<DocKey, File>>>({})
-  const setPdf = (key: DocKey) => (f: File) => setPdfs(prev => ({ ...prev, [key]: f }))
-
   const [csv1, setCsv1] = useState<File | null>(null)
   const [csv2, setCsv2] = useState<File | null>(null)
   const [csv3, setCsv3] = useState<File | null>(null)
@@ -405,12 +357,9 @@ export default function HomePage() {
   const atualizarCnpjGrupo = (i: number, val: string) =>
     setCnpjsGrupo(prev => prev.map((c, idx) => idx === i ? formatarCnpj(val) : c))
 
-  const todosDocsPresentes = DOC_KEYS.every(k => pdfs[k])
-
   const podeEnviar =
     cnpj.replace(/\D/g, '').length === 14 &&
     dataPedido !== '' &&
-    todosDocsPresentes &&
     csv1 !== null && csv2 !== null &&
     (!grupoEconomico || csv3 !== null)
 
@@ -477,14 +426,6 @@ export default function HomePage() {
       }
 
       const { pedidoId } = await res1.json()
-
-      // ── Etapa 2: análise documental com IA (Haiku) ──────────────────────────
-      setLoadingMsg('Analisando documentos com IA... (pode levar até 1 minuto)')
-      const formData = new FormData()
-      formData.append('pedidoId', pedidoId)
-      for (const key of DOC_KEYS) formData.append(key, pdfs[key]!)
-      const res2 = await fetch('/api/analisar-documentos', { method: 'POST', body: formData })
-      if (!res2.ok) console.warn('Análise documental falhou:', (await res2.json()).erro)
 
       router.push(`/analise/${pedidoId}`)
     } catch (err: any) {
@@ -669,29 +610,6 @@ export default function HomePage() {
                 </button>
               </div>
             )}
-          </div>
-        </section>
-
-        {/* Upload dos documentos formais */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-3">
-          <div>
-            <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide">
-              Documentos Formais (PDF)
-            </h3>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {DOC_KEYS.filter(k => pdfs[k]).length} de {DOC_KEYS.length} documentos carregados · analisados automaticamente pela IA
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {DOC_KEYS.map(key => (
-              <PdfDropZone
-                key={key}
-                label={DOC_LABELS[key].label}
-                sublabel={DOC_LABELS[key].sub}
-                arquivo={pdfs[key] ?? null}
-                onFile={setPdf(key)}
-              />
-            ))}
           </div>
         </section>
 

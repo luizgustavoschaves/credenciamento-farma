@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ResultadoAnalise } from '@/lib/types'
-import { ResultadoDocumentos } from '@/lib/tipos-documentos'
 
 function fmtBRL(v: number) {
   return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -74,112 +73,30 @@ function RequisitCard({
 // Converte resultado da IA para checklist inicial do auditor
 // ──────────────────────────────────────────────────────────────────────────────
 
-function aiParaChecklist(rd: ResultadoDocumentos): ChecklistManual {
-  const mapStatus = (r: string): StatusDoc =>
-    r === 'aprovado' ? 'aprovado' : r === 'reprovado' ? 'reprovado' : 'pendente_auditor'
-
-  return {
-    contrato_social:      { status: mapStatus(rd.contrato_social.resultado),      observacao: rd.contrato_social.observacoes.join('; ') },
-    docs_socios:          { status: mapStatus(rd.docs_socios.resultado),           observacao: rd.docs_socios.observacoes.join('; ') },
-    imovel:               { status: mapStatus(rd.imovel.resultado),                observacao: rd.imovel.observacoes.join('; ') },
-    comprovante_endereco: { status: mapStatus(rd.comprovante_endereco.resultado),  observacao: rd.comprovante_endereco.observacoes.join('; ') },
-    ir_socios:            { status: mapStatus(rd.ir_socios.resultado),             observacao: rd.ir_socios.observacoes.join('; ') },
-    rais_gfip:            { status: mapStatus(rd.rais_gfip.resultado),             observacao: rd.rais_gfip.observacoes.join('; ') },
-    contrato_contador:    { status: mapStatus(rd.contrato_contador.resultado),     observacao: rd.contrato_contador.observacoes.join('; ') },
-    licenca_anvisa:       { status: mapStatus(rd.licenca_anvisa.resultado),        observacao: rd.licenca_anvisa.observacoes.join('; ') },
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Resumo colapsável dos resultados detalhados da IA
-// ──────────────────────────────────────────────────────────────────────────────
-
-function ResumoIA({ rd }: { rd: ResultadoDocumentos }) {
-  const [aberto, setAberto] = useState(false)
-
-  const itens = [
-    { id: 'DOC-1', titulo: 'Contrato Social',              resultado: rd.contrato_social.resultado,      detalhe: rd.contrato_social.objeto_social_extraido ? `Objeto: "${rd.contrato_social.objeto_social_extraido.slice(0, 80)}..."` : '' },
-    { id: 'DOC-2', titulo: 'Docs. Sócios',                 resultado: rd.docs_socios.resultado,           detalhe: rd.docs_socios.socios_confirmados.length ? `Confirmados: ${rd.docs_socios.socios_confirmados.join(', ')}` : '' },
-    { id: 'DOC-3', titulo: 'Imóvel / Locação',             resultado: rd.imovel.resultado,                detalhe: rd.imovel.endereco_extraido ?? '' },
-    { id: 'DOC-4', titulo: 'Comprovante de Endereço',      resultado: rd.comprovante_endereco.resultado,  detalhe: rd.comprovante_endereco.enderecos_batem ? 'Endereços conferem' : '⚠️ Endereços divergentes' },
-    { id: 'DOC-5', titulo: 'IR dos Sócios',                resultado: rd.ir_socios.resultado,             detalhe: rd.ir_socios.anos_encontrados.length ? `Anos: ${rd.ir_socios.anos_encontrados.join(', ')}` : '' },
-    { id: 'DOC-6', titulo: 'RAIS / GFIP',                  resultado: rd.rais_gfip.resultado,             detalhe: `${rd.rais_gfip.funcionarios_declarados} funcionário(s) declarado(s)` },
-    { id: 'DOC-7', titulo: 'Contrato Contador + DHP',      resultado: rd.contrato_contador.resultado,     detalhe: rd.contrato_contador.vigencia_indeterminada ? 'Prazo indeterminado' : rd.contrato_contador.vigencia_fim ? `Vigência até ${rd.contrato_contador.vigencia_fim}` : '' },
-    { id: 'DOC-8', titulo: 'Licença ANVISA',               resultado: rd.licenca_anvisa.resultado,        detalhe: rd.licenca_anvisa.numero_autorizacao ? `Nº ${rd.licenca_anvisa.numero_autorizacao} · vence ${rd.licenca_anvisa.vigencia_fim ?? '?'}` : '' },
-  ]
-
-  const cor: Record<string, string> = {
-    aprovado: 'text-green-700 bg-green-50',
-    reprovado: 'text-red-700 bg-red-50',
-    pendente_auditor: 'text-amber-700 bg-amber-50',
-  }
-  const label: Record<string, string> = { aprovado: 'OK', reprovado: 'NOK', pendente_auditor: 'Verificar' }
-
-  return (
-    <div className="mb-4 border border-blue-100 rounded-xl overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setAberto(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 hover:bg-blue-100 transition-colors text-left"
-      >
-        <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
-          🤖 Pré-análise da IA — clique para {aberto ? 'recolher' : 'expandir'}
-        </span>
-        <span className="text-blue-400 text-lg">{aberto ? '▲' : '▼'}</span>
-      </button>
-
-      {aberto && (
-        <div className="divide-y divide-gray-100">
-          {itens.map(item => (
-            <div key={item.id} className="flex items-start gap-3 px-4 py-2.5">
-              <span className="text-xs font-bold text-gray-400 w-12 flex-shrink-0 pt-0.5">{item.id}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800">{item.titulo}</p>
-                {item.detalhe && <p className="text-xs text-gray-400 mt-0.5 truncate">{item.detalhe}</p>}
-              </div>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${cor[item.resultado] ?? 'text-gray-500 bg-gray-100'}`}>
-                {label[item.resultado] ?? item.resultado}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Checklist documental manual
 // ──────────────────────────────────────────────────────────────────────────────
 
-type StatusDoc = 'aprovado' | 'reprovado' | 'pendente_auditor' | ''
-
-interface ItemChecklist {
-  status: StatusDoc
-  observacao: string
-}
-
 type ChaveDoc =
   | 'contrato_social' | 'docs_socios' | 'imovel' | 'comprovante_endereco'
   | 'ir_socios' | 'rais_gfip' | 'contrato_contador' | 'licenca_anvisa'
 
-type ChecklistManual = Record<ChaveDoc, ItemChecklist>
+type ChecklistManual = Record<ChaveDoc, { checked: boolean }>
 
 const DOCS_CONFIG: { chave: ChaveDoc; id: string; titulo: string; criterio: string }[] = [
-  { chave: 'contrato_social',      id: 'DOC-1', titulo: 'Contrato Social',                          criterio: 'Objeto social inclui atacado farmacêutico; constituição regular' },
-  { chave: 'docs_socios',          id: 'DOC-2', titulo: 'Docs. Pessoais dos Sócios/Diretores',      criterio: 'RG, CPF, CNH ou passaporte de todos os sócios do contrato social' },
-  { chave: 'imovel',               id: 'DOC-3', titulo: 'Registro de Imóvel ou Contrato de Locação',criterio: 'Endereço confere com o estabelecimento credenciado' },
-  { chave: 'comprovante_endereco', id: 'DOC-4', titulo: 'Comprovante de Endereço',                  criterio: 'Mês anterior ao pedido; endereço bate com o imóvel/locação' },
-  { chave: 'ir_socios',            id: 'DOC-5', titulo: 'Imposto de Renda dos Sócios (3 últimos)',  criterio: 'Declarações dos últimos 3 anos de todos os sócios' },
-  { chave: 'rais_gfip',            id: 'DOC-6', titulo: 'RAIS ou GFIP',                             criterio: 'Quadro de funcionários CLT atinge o mínimo exigido pelo REQ-8' },
-  { chave: 'contrato_contador',    id: 'DOC-7', titulo: 'Contrato do Contador + DHP',               criterio: 'Contrato vigente no mês do pedido; DHP do contador em dia' },
-  { chave: 'licenca_anvisa',       id: 'DOC-8', titulo: 'Licença ANVISA',                           criterio: 'Autorização de funcionamento vigente (vencimento posterior ao pedido)' },
+  { chave: 'contrato_social',      id: 'DOC-1', titulo: 'Contrato Social',                           criterio: 'Objeto social inclui atacado farmacêutico; constituição regular' },
+  { chave: 'docs_socios',          id: 'DOC-2', titulo: 'Docs. Pessoais dos Sócios/Diretores',       criterio: 'RG, CPF, CNH ou passaporte de todos os sócios do contrato social' },
+  { chave: 'imovel',               id: 'DOC-3', titulo: 'Registro de Imóvel ou Contrato de Locação', criterio: 'Endereço confere com o estabelecimento credenciado' },
+  { chave: 'comprovante_endereco', id: 'DOC-4', titulo: 'Comprovante de Endereço',                   criterio: 'Mês anterior ao pedido; endereço bate com o imóvel/locação' },
+  { chave: 'ir_socios',            id: 'DOC-5', titulo: 'Imposto de Renda dos Sócios (3 últimos)',   criterio: 'Declarações dos últimos 3 anos de todos os sócios' },
+  { chave: 'rais_gfip',            id: 'DOC-6', titulo: 'RAIS ou GFIP',                              criterio: 'Quadro de funcionários CLT atinge o mínimo exigido pelo REQ-8' },
+  { chave: 'contrato_contador',    id: 'DOC-7', titulo: 'Contrato do Contador + DHP',                criterio: 'Contrato vigente no mês do pedido; DHP do contador em dia' },
+  { chave: 'licenca_anvisa',       id: 'DOC-8', titulo: 'Licença ANVISA',                            criterio: 'Autorização de funcionamento vigente (vencimento posterior ao pedido)' },
 ]
 
-function itemInicial(): ItemChecklist { return { status: '', observacao: '' } }
-
 function checklistInicial(): ChecklistManual {
-  return Object.fromEntries(DOCS_CONFIG.map(d => [d.chave, itemInicial()])) as ChecklistManual
+  return Object.fromEntries(DOCS_CONFIG.map(d => [d.chave, { checked: false }])) as ChecklistManual
 }
 
 function ChecklistDocumental({
@@ -189,17 +106,13 @@ function ChecklistDocumental({
   pedidoId: string
   valorInicial: ChecklistManual | null
 }) {
-  const [itens, setItens]     = useState<ChecklistManual>(valorInicial ?? checklistInicial())
+  const [itens, setItens]       = useState<ChecklistManual>(valorInicial ?? checklistInicial())
   const [salvando, setSalvando] = useState(false)
-  const [salvo, setSalvo]     = useState(!!valorInicial)
+  const [salvo, setSalvo]       = useState(!!valorInicial)
 
-  const setStatus = (chave: ChaveDoc, status: StatusDoc) => {
+  const toggle = (chave: ChaveDoc) => {
     setSalvo(false)
-    setItens(prev => ({ ...prev, [chave]: { ...prev[chave], status } }))
-  }
-  const setObs = (chave: ChaveDoc, observacao: string) => {
-    setSalvo(false)
-    setItens(prev => ({ ...prev, [chave]: { ...prev[chave], observacao } }))
+    setItens(prev => ({ ...prev, [chave]: { checked: !prev[chave].checked } }))
   }
 
   async function salvar() {
@@ -213,71 +126,45 @@ function ChecklistDocumental({
     setSalvo(true)
   }
 
-  const statusLabel: Record<StatusDoc, string> = {
-    aprovado:         'Aprovado',
-    reprovado:        'Reprovado',
-    pendente_auditor: 'Verificar',
-    '':               'Não verificado',
-  }
-  const statusCor: Record<StatusDoc, string> = {
-    aprovado:         'bg-green-100 text-green-800 border-green-300',
-    reprovado:        'bg-red-100 text-red-800 border-red-300',
-    pendente_auditor: 'bg-amber-100 text-amber-800 border-amber-300',
-    '':               'bg-gray-100 text-gray-500 border-gray-200',
-  }
+  const totalMarcados = DOCS_CONFIG.filter(d => itens[d.chave].checked).length
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
+      <p className="text-xs text-gray-400 mb-3">
+        {totalMarcados}/{DOCS_CONFIG.length} documentos verificados
+      </p>
+
       {DOCS_CONFIG.map(({ chave, id, titulo, criterio }) => {
-        const item = itens[chave]
+        const checked = itens[chave].checked
         return (
-          <div
+          <label
             key={chave}
-            className={`rounded-xl border border-gray-100 border-l-4 p-4 bg-white
-              ${item.status === 'aprovado' ? 'border-l-green-500'
-              : item.status === 'reprovado' ? 'border-l-red-500'
-              : item.status === 'pendente_auditor' ? 'border-l-amber-400'
-              : 'border-l-gray-200'}`}
+            className={`flex items-start gap-3 rounded-xl border p-3.5 cursor-pointer transition-all
+              ${checked
+                ? 'border-green-300 bg-green-50'
+                : 'border-gray-100 bg-white hover:border-gray-300'}`}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-gray-400 uppercase">{id}</span>
-                  <h4 className="font-semibold text-gray-800 text-sm">{titulo}</h4>
-                </div>
-                <p className="text-xs text-gray-400 mt-0.5">{criterio}</p>
-              </div>
-
-              {/* Seletor de status */}
-              <div className="flex gap-1.5 flex-shrink-0">
-                {(['aprovado', 'reprovado', 'pendente_auditor'] as StatusDoc[]).map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setStatus(chave, item.status === s ? '' : s)}
-                    className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-all
-                      ${item.status === s ? statusCor[s] : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'}`}
-                  >
-                    {statusLabel[s]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Campo de observação */}
             <input
-              type="text"
-              value={item.observacao}
-              onChange={e => setObs(chave, e.target.value)}
-              placeholder="Observação (opcional)"
-              className="mt-2 w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5
-                focus:outline-none focus:ring-1 focus:ring-sefaz-blue text-gray-700 placeholder-gray-300"
+              type="checkbox"
+              checked={checked}
+              onChange={() => toggle(chave)}
+              className="mt-0.5 h-4 w-4 rounded accent-green-600 flex-shrink-0 cursor-pointer"
             />
-          </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-400">{id}</span>
+                <span className={`text-sm font-semibold ${checked ? 'text-green-700' : 'text-gray-800'}`}>
+                  {titulo}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 mt-0.5">{criterio}</p>
+            </div>
+            {checked && <span className="text-green-500 text-base flex-shrink-0">✓</span>}
+          </label>
         )
       })}
 
-      <div className="flex justify-end pt-1">
+      <div className="flex justify-end pt-2">
         <button
           onClick={salvar}
           disabled={salvando}
@@ -311,7 +198,6 @@ export default function AnalisePage() {
   const [matricula,      setMatricula]      = useState('')
 
   // ── Estado da análise documental ──
-  const [resultadoDocs,  setResultadoDocs]  = useState<ResultadoDocumentos | null>(null)
   const [checklistDocs,  setChecklistDocs]  = useState<ChecklistManual | null>(null)
 
   useEffect(() => {
@@ -345,15 +231,9 @@ export default function AnalisePage() {
         if (parecer.aprovado_em) setSalvo(true)
       }
       if (docAnalise?.resultado_json) {
-        // resultado_json pode ser ResultadoDocumentos (IA) ou ChecklistManual (manual)
         const rj = docAnalise.resultado_json as any
-        if ('contrato_social' in rj && 'status' in (rj.contrato_social ?? {})) {
-          // Formato manual (ChecklistManual)
+        if ('contrato_social' in rj && 'checked' in (rj.contrato_social ?? {})) {
           setChecklistDocs(rj as ChecklistManual)
-        } else if ('contrato_social' in rj) {
-          // Formato IA (ResultadoDocumentos) — converte para checklist inicial
-          setResultadoDocs(rj as ResultadoDocumentos)
-          setChecklistDocs(aiParaChecklist(rj as ResultadoDocumentos))
         }
       }
       setCarregando(false)
@@ -418,12 +298,9 @@ export default function AnalisePage() {
             Checklist Documental
           </h3>
           <p className="text-xs text-gray-400 mt-0.5">
-            {resultadoDocs
-              ? 'Pré-análise feita pela IA — revise e confirme cada documento abaixo.'
-              : 'Marque cada documento após verificação. O checklist é salvo no banco de dados.'}
+            {'Marque cada documento após verificação. O checklist é salvo no banco de dados.'}
           </p>
         </div>
-        {resultadoDocs && <ResumoIA rd={resultadoDocs} />}
         <ChecklistDocumental pedidoId={id} valorInicial={checklistDocs} />
       </div>
 
