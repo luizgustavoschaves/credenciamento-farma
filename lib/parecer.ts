@@ -301,7 +301,6 @@ export function gerarParecerFallback(resultado: ResultadoAnalise): string {
     motivos_indeferimento.forEach((m, i) => linhas.push(`${i + 1}. ${m}`))
   }
   linhas.push('')
-  linhas.push('⚠️ Parecer gerado automaticamente (modo offline). Revise e complemente antes de aprovar.')
 
   return linhas.join('\n')
 }

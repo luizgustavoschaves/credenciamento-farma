@@ -495,7 +495,7 @@ export default function AnalisePage() {
               ? <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Aguardando aprovação</span>
               : <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">✅ Parecer aprovado</span>
             }
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               <input
                 type="text"
                 value={matricula}
@@ -511,20 +511,22 @@ export default function AnalisePage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1 bg-sefaz-blue text-white text-xs font-semibold
                   rounded-lg hover:bg-blue-900 transition-colors"
-                title="Exportar como Informação Fiscal (PDF)"
+                title="Exportar como Informação Fiscal (PDF para impressão)"
               >
-                📄 Exportar IF
+                📄 Exportar PDF
+              </a>
+              <a
+                href={`/api/exportar-docx?id=${id}${matricula ? `&matricula=${encodeURIComponent(matricula)}` : ''}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-700 text-white text-xs font-semibold
+                  rounded-lg hover:bg-green-900 transition-colors"
+                title="Exportar como documento Word (.docx)"
+              >
+                📝 Exportar Word
               </a>
             </div>
           </div>
         </div>
-        {parecerGerado.includes('Parecer gerado automaticamente (modo offline)') ? (
-          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-            ⚠️ A IA não estava disponível no momento da análise. Revise antes de aprovar.
-          </p>
-        ) : (
-          <p className="text-xs text-gray-400 mb-2">Texto gerado pela IA. Edite se necessário antes de aprovar.</p>
-        )}
+        <p className="text-xs text-gray-400 mb-2">Revise e complemente o texto antes de aprovar.</p>
         <textarea
           value={parecerFinal}
           onChange={e => setParecerFinal(e.target.value)}

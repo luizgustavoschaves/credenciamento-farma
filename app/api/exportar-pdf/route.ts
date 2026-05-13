@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { ResultadoAnalise } from '@/lib/types'
+import { ITENS_CHECKLIST } from '@/lib/checklist-items'
 import fs from 'fs'
 import path from 'path'
 
@@ -75,8 +76,8 @@ function gerarTabela1(resultado: ResultadoAnalise): string {
   const dados = resultado.dados_mensais ?? []
   if (dados.length === 0) return ''
 
-  const totalEntradas = dados.reduce((s, d) => s + d.entradas, 0)
-  const totalSaidas   = dados.reduce((s, d) => s + d.saidas,   0)
+  const totalSaidas = dados.reduce((s, d) => s + d.saidas, 0)
+  const mediaSaidas = dados.length > 0 ? totalSaidas / dados.length : 0
 
   const linhas = dados.map(d => {
     const problema = d.saidas < d.entradas
@@ -84,9 +85,7 @@ function gerarTabela1(resultado: ResultadoAnalise): string {
     return `
       <tr${cls}>
         <td>${esc(d.competencia)}</td>
-        <td class="num">${fmtBRL(d.entradas)}</td>
         <td class="num">${fmtBRL(d.saidas)}</td>
-        <td class="num centro">${problema ? '⚠' : '✓'}</td>
       </tr>`
   }).join('')
 
@@ -97,9 +96,7 @@ function gerarTabela1(resultado: ResultadoAnalise): string {
         <thead>
           <tr>
             <th>Mês/Ano</th>
-            <th class="num">Entradas (R$)</th>
-            <th class="num">Saídas / Faturamento (R$)</th>
-            <th class="num centro">Situação</th>
+            <th class="num">Faturamento / Saídas (R$)</th>
           </tr>
         </thead>
         <tbody>
@@ -108,13 +105,15 @@ function gerarTabela1(resultado: ResultadoAnalise): string {
         <tfoot>
           <tr class="total">
             <td><strong>TOTAL</strong></td>
-            <td class="num"><strong>${fmtBRL(totalEntradas)}</strong></td>
             <td class="num"><strong>${fmtBRL(totalSaidas)}</strong></td>
-            <td></td>
+          </tr>
+          <tr class="total">
+            <td><strong>MÉDIA MENSAL</strong></td>
+            <td class="num"><strong>${fmtBRL(mediaSaidas)}</strong></td>
           </tr>
         </tfoot>
       </table>
-      <p class="tabela-legenda">⚠ Meses em que o faturamento (saídas) foi inferior às entradas — Art. 3º, III da Portaria GABIN 410/2025</p>
+      <p class="tabela-legenda">⚠ Meses destacados: faturamento inferior às entradas — Art. 3º, III da Portaria GABIN 410/2025</p>
     </div>`
 }
 
@@ -138,6 +137,7 @@ function gerarTabela2(resultado: ResultadoAnalise): string {
     return `
       <tr${cls}>
         <td>${esc(d.competencia)}</td>
+        <td class="num">${fmtBRL(d.entradas)}</td>
         <td class="num">${fmtBRL(acumEntradas)}</td>
         <td class="num">${fmtBRL(acumSaidas)}</td>
         <td class="num">${pct.toFixed(2).replace('.', ',')}%</td>
@@ -148,11 +148,12 @@ function gerarTabela2(resultado: ResultadoAnalise): string {
 
   return `
     <div class="tabela-bloco">
-      <p class="tabela-titulo">Tabela 2 — Entradas Acumuladas Versus Saídas Acumuladas</p>
+      <p class="tabela-titulo">Tabela 2 — Entradas Versus Saídas Acumuladas</p>
       <table class="tabela-dados">
         <thead>
           <tr>
             <th>Mês/Ano</th>
+            <th class="num">Entradas (R$)</th>
             <th class="num">Entradas Acumuladas (R$)</th>
             <th class="num">Saídas Acumuladas (R$)</th>
             <th class="num">Saídas / Entradas (%)</th>
@@ -164,47 +165,20 @@ function gerarTabela2(resultado: ResultadoAnalise): string {
         <tfoot>
           <tr class="total">
             <td><strong>ACUMULADO TOTAL</strong></td>
+            <td></td>
             <td class="num"><strong>${fmtBRL(acumEntradas)}</strong></td>
             <td class="num"><strong>${fmtBRL(acumSaidas)}</strong></td>
             <td class="num"><strong>${pctFinal.toFixed(2).replace('.', ',')}%</strong></td>
           </tr>
         </tfoot>
       </table>
-      <p class="tabela-legenda">Percentual apurado mensalmente: saídas / entradas acumuladas. Impedimento quando 3 ou mais meses consecutivos apresentam percentual inferior a 100%.</p>
+      <p class="tabela-legenda">Percentual apurado mensalmente: saídas acumuladas / entradas acumuladas. Impedimento quando 3 ou mais meses consecutivos apresentam percentual inferior a 100%.</p>
     </div>`
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Tabela 3 — Checklist de Requisitos (19 itens)
 // ──────────────────────────────────────────────────────────────────────────────
-
-const ITENS_CHECKLIST: {
-  num: number
-  descricao: string
-  base: string
-  chaveManual?: string
-  reqCsv?: 'req4' | 'req5' | 'req6' | 'req7' | 'req8'
-}[] = [
-  { num: 1,  descricao: 'CNAE 4644-3/01 ou 4645-1/00 enquadrado',                     base: 'Art. 3º, V',       chaveManual: 'cnae'               },
-  { num: 2,  descricao: 'Requerimento do pedido (SEFAZ)',                              base: 'Art. 2º, I',       chaveManual: 'requerimento'       },
-  { num: 3,  descricao: 'Instrumento constitutivo (Contrato Social)',                  base: 'Art. 2º, II, a',   chaveManual: 'contrato_social'    },
-  { num: 4,  descricao: 'Cédulas de identidade e CPF dos sócios',                     base: 'Art. 2º, II, b',   chaveManual: 'docs_socios'        },
-  { num: 5,  descricao: 'Registro de imóvel ou contrato de locação',                  base: 'Art. 2º, II, c',   chaveManual: 'imovel'             },
-  { num: 6,  descricao: 'Última conta de energia ou comprovante de endereço',          base: 'Art. 2º, II, d',   chaveManual: 'comprovante_endereco'},
-  { num: 7,  descricao: 'Três últimos IR dos sócios ou diretores',                    base: 'Art. 2º, II, e',   chaveManual: 'ir_socios'          },
-  { num: 8,  descricao: 'RAIS (Relação Anual de Informações Sociais)',                 base: 'Art. 2º, II, f',   chaveManual: 'rais'               },
-  { num: 9,  descricao: 'GFIP dos últimos 12 meses',                                  base: 'Art. 2º, II, g',   chaveManual: 'gfip'               },
-  { num: 10, descricao: 'Contrato do contador + DHP',                                 base: 'Art. 2º, II, h',   chaveManual: 'contrato_contador'  },
-  { num: 11, descricao: 'Licença da ANVISA (autorização de funcionamento)',            base: 'Art. 2º, II, i',   chaveManual: 'licenca_anvisa'     },
-  { num: 12, descricao: 'Regularidade fiscal e cadastral',                            base: 'Art. 2º, I',       chaveManual: 'regularidade_fiscal'},
-  { num: 13, descricao: 'Regularidade DIEF/GIA-ST',                                   base: 'Art. 3º, II',      chaveManual: 'regularidade_dief'  },
-  { num: 14, descricao: 'Declaração de grupo econômico',                              base: 'Art. 3º, §1º',     chaveManual: 'grupo_economico'    },
-  { num: 15, descricao: 'Faturamento acumulado ≥ 100% das entradas (sem 3 meses consec.)', base: 'Art. 3º, III', reqCsv: 'req4'                   },
-  { num: 16, descricao: 'Faturamento anual ≥ R$ 4.000.000,00',                        base: 'Art. 3º, IV',      reqCsv: 'req5'                    },
-  { num: 17, descricao: 'Saídas de itens prioritários ≥ 70% das saídas da Tabela I',  base: 'Art. 3º, VI',      reqCsv: 'req6'                    },
-  { num: 18, descricao: 'Agregação ≥ 30% nas vendas ao grupo econômico',              base: 'Art. 3º, VII',     reqCsv: 'req7'                    },
-  { num: 19, descricao: 'Número mínimo de funcionários com carteira assinada',        base: 'Art. 4º',          reqCsv: 'req8'                    },
-]
 
 function gerarTabela3(resultado: ResultadoAnalise, checklist: Record<string, { checked: boolean }> | null): string {
   const linhas = ITENS_CHECKLIST.map(item => {
@@ -244,7 +218,7 @@ function gerarTabela3(resultado: ResultadoAnalise, checklist: Record<string, { c
   }).join('')
 
   return `
-    <div class="tabela-bloco quebra-pagina">
+    <div class="tabela-bloco">
       <p class="tabela-titulo">Tabela 3 — Checklist de Requisitos — Portaria GABIN 410/2025</p>
       <table class="tabela-dados tabela-checklist">
         <thead>
