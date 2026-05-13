@@ -14,6 +14,7 @@ import {
   DetalheReq6,
   DetalheReq7,
   DetalheReq8,
+  DadosMensais,
 } from './types'
 import {
   buscarItemPorNCM,
@@ -265,6 +266,15 @@ export function executarAnalise(params: {
   const req7 = verificarReq7(grp12m, ncm12m)
   const req8 = calcularReq8(req5.detalhe.media_mensal)
 
+  // Dados mensais ordenados cronologicamente (para tabelas do PDF)
+  const dadosMensais: DadosMensais[] = [...fat12m]
+    .sort((a, b) => compararCompetencia(a.competencia, b.competencia))
+    .map(l => ({
+      competencia: l.competencia,
+      entradas:    l.valor_total_entradas,
+      saidas:      l.valor_total_saidas,
+    }))
+
   // Consolidar conclusão
   const reprovados: string[] = []
 
@@ -308,6 +318,7 @@ export function executarAnalise(params: {
     req8,
     conclusao: reprovados.length === 0 ? 'deferido' : 'indeferido',
     motivos_indeferimento: reprovados,
+    dados_mensais: dadosMensais,
   }
 }
 

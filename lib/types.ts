@@ -65,6 +65,12 @@ export interface DetalheReq8 {
   empregados_minimos_exigidos: number
 }
 
+export interface DadosMensais {
+  competencia: string   // MM/AAAA
+  entradas: number
+  saidas: number
+}
+
 export interface ResultadoAnalise {
   cnpj: string
   data_analise: string
@@ -79,6 +85,9 @@ export interface ResultadoAnalise {
 
   conclusao: 'deferido' | 'indeferido'
   motivos_indeferimento: string[]
+
+  // Dados mensais para geração de tabelas no PDF
+  dados_mensais: DadosMensais[]
 }
 
 // ──────────────────────────────────────────

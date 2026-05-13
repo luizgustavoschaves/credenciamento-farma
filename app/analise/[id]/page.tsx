@@ -79,67 +79,121 @@ function RequisitCard({
 // ──────────────────────────────────────────────────────────────────────────────
 
 type ChaveDoc =
-  | 'contrato_social' | 'docs_socios' | 'imovel' | 'comprovante_endereco'
-  | 'ir_socios' | 'rais_gfip' | 'contrato_contador' | 'licenca_anvisa'
+  | 'cnae'
+  | 'requerimento'
+  | 'contrato_social'
+  | 'docs_socios'
+  | 'imovel'
+  | 'comprovante_endereco'
+  | 'ir_socios'
+  | 'rais'
+  | 'gfip'
+  | 'contrato_contador'
+  | 'licenca_anvisa'
+  | 'regularidade_fiscal'
+  | 'regularidade_dief'
+  | 'grupo_economico'
 
 type ChecklistManual = Record<ChaveDoc, { checked: boolean }>
 
 const DOCS_CONFIG: { chave: ChaveDoc; id: string; titulo: string; criterio: string; dica: string }[] = [
   {
-    chave: 'contrato_social',
+    chave: 'cnae',
     id: 'DOC-1',
-    titulo: 'Contrato Social',
+    titulo: 'CNAE enquadrado (4644-3/01 ou 4645-1/00)',
+    criterio: 'CNAE principal ou secundário é comércio atacadista de medicamentos',
+    dica: 'Verificar no cadastro estadual (CAGEF) se o CNAE 4644-3/01 (medicamentos para uso humano) ou 4645-1/00 (medicamentos para uso veterinário) consta como principal ou secundário. Art. 3º, inciso V da Portaria 410/2025.',
+  },
+  {
+    chave: 'requerimento',
+    id: 'DOC-2',
+    titulo: 'Requerimento do pedido (SEFAZ)',
+    criterio: 'Formulário de pedido de credenciamento protocolado na SEFAZ',
+    dica: 'Verificar se o requerimento foi corretamente preenchido e protocolado, contendo CNPJ, razão social, endereço, número do processo SEI e assinatura do responsável legal. Art. 2º, inciso I da Portaria 410/2025.',
+  },
+  {
+    chave: 'contrato_social',
+    id: 'DOC-3',
+    titulo: 'Instrumento constitutivo (Contrato Social)',
     criterio: 'Objeto social inclui atacado farmacêutico; constituição regular',
-    dica: 'Analisar o objeto social da empresa e a data de constituição.',
+    dica: 'Analisar o objeto social da empresa e a data de constituição. Verificar se a última alteração contratual está registrada na JUCEMA. Art. 2º, inciso II, alínea a da Portaria 410/2025.',
   },
   {
     chave: 'docs_socios',
-    id: 'DOC-2',
-    titulo: 'Documentos Pessoais dos Sócios ou Diretores',
-    criterio: 'RG, CPF, CNH ou passaporte de todos os sócios do contrato social',
-    dica: 'Verificar se a pessoa identificada no documento está nominada no contrato social.',
+    id: 'DOC-4',
+    titulo: 'Cédulas de identidade e CPF dos sócios',
+    criterio: 'RG e CPF de todos os sócios listados no contrato social',
+    dica: 'Verificar se a pessoa identificada no documento está nominada no contrato social. Conferir se todos os sócios com participação no capital estão com documentação atualizada. Art. 2º, inciso II, alínea b da Portaria 410/2025.',
   },
   {
     chave: 'imovel',
-    id: 'DOC-3',
+    id: 'DOC-5',
     titulo: 'Registro de Imóvel ou Contrato de Locação',
     criterio: 'Endereço confere com o estabelecimento credenciado',
-    dica: 'Verificar se o endereço do imóvel ou da locação corresponde ao do estabelecimento.',
+    dica: 'Verificar se o endereço do imóvel ou da locação corresponde ao do estabelecimento. No caso de locação, o contrato deve estar vigente na data do pedido. Art. 2º, inciso II, alínea c da Portaria 410/2025.',
   },
   {
     chave: 'comprovante_endereco',
-    id: 'DOC-4',
-    titulo: 'Comprovante de Endereço',
+    id: 'DOC-6',
+    titulo: 'Comprovante de Endereço (última conta de energia)',
     criterio: 'Mês anterior ao pedido; endereço bate com o imóvel/locação',
-    dica: 'Deve ser a última conta de energia elétrica ou outro comprovante emitido no mês anterior ao pedido. Verificar se o endereço bate com o do registro de imóvel ou contrato de locação.',
+    dica: 'Deve ser a última conta de energia elétrica ou outro comprovante emitido no mês anterior ao pedido. Verificar se o endereço bate com o do registro de imóvel ou contrato de locação. Art. 2º, inciso II, alínea d da Portaria 410/2025.',
   },
   {
     chave: 'ir_socios',
-    id: 'DOC-5',
-    titulo: 'Imposto de Renda dos Sócios (3 últimos anos)',
+    id: 'DOC-7',
+    titulo: 'Três últimos IR dos sócios',
     criterio: 'Declarações dos últimos 3 anos de todos os sócios',
-    dica: 'Verificar se as pessoas constantes nas declarações de IR são as mesmas listadas como sócias no contrato social.',
+    dica: 'Verificar se as pessoas constantes nas declarações de IR são as mesmas listadas como sócias no contrato social. Checar se os exercícios são os três últimos antes do pedido. Art. 2º, inciso II, alínea e da Portaria 410/2025.',
   },
   {
-    chave: 'rais_gfip',
-    id: 'DOC-6',
-    titulo: 'RAIS ou documento substituto',
-    criterio: 'Quadro de funcionários CLT atinge o mínimo exigido pelo faturamento',
-    dica: 'Relação Anual de Informações Sociais (RAIS) ou outro documento equivalente. Verificar a quantidade de funcionários declarados e se está condizente com o mínimo exigido pela faixa de faturamento apurada.',
+    chave: 'rais',
+    id: 'DOC-8',
+    titulo: 'RAIS (Relação Anual de Informações Sociais)',
+    criterio: 'Quadro de funcionários CLT declarado na RAIS',
+    dica: 'Relação Anual de Informações Sociais do último exercício. Verificar a quantidade de funcionários declarados e se está condizente com o mínimo exigido pela faixa de faturamento apurada. Art. 2º, inciso II, alínea f da Portaria 410/2025.',
+  },
+  {
+    chave: 'gfip',
+    id: 'DOC-9',
+    titulo: 'GFIP (12 meses)',
+    criterio: 'Guias GFIP dos 12 meses anteriores ao pedido',
+    dica: 'Guia de Recolhimento do FGTS e de Informações à Previdência Social dos últimos 12 meses. Conferir consistência entre a quantidade de empregados declarados na GFIP e na RAIS. Art. 2º, inciso II, alínea g da Portaria 410/2025.',
   },
   {
     chave: 'contrato_contador',
-    id: 'DOC-7',
+    id: 'DOC-10',
     titulo: 'Contrato do Contador + DHP',
     criterio: 'Contrato vigente no mês do pedido; DHP do contador em dia',
-    dica: 'Contrato de prestação de serviços contábeis firmado com a empresa atacadista, acompanhado da Declaração de Habilitação Profissional (DHP) do contabilista. Verificar se o contrato está vigente na data do pedido de credenciamento.',
+    dica: 'Contrato de prestação de serviços contábeis firmado com a empresa atacadista, acompanhado da Declaração de Habilitação Profissional (DHP) do contabilista. Verificar se o contrato está vigente na data do pedido de credenciamento. Art. 2º, inciso II, alínea h da Portaria 410/2025.',
   },
   {
     chave: 'licenca_anvisa',
-    id: 'DOC-8',
+    id: 'DOC-11',
     titulo: 'Licença da ANVISA',
     criterio: 'Autorização de funcionamento vigente (vencimento posterior ao pedido)',
-    dica: 'Autorização de Funcionamento emitida pela Agência Nacional de Vigilância Sanitária (ANVISA). Verificar se a licença está vigente na data do pedido.',
+    dica: 'Autorização de Funcionamento emitida pela Agência Nacional de Vigilância Sanitária (ANVISA). Verificar se a licença está vigente na data do pedido. Art. 2º, inciso II, alínea i da Portaria 410/2025.',
+  },
+  {
+    chave: 'regularidade_fiscal',
+    id: 'DOC-12',
+    titulo: 'Regularidade fiscal e cadastral',
+    criterio: 'Certidões negativas estadual e federal em dia',
+    dica: 'Verificar no sistema CAGEF se o contribuinte está com situação cadastral regular (ativo) e se não há débitos inscritos em dívida ativa estadual. Consultar também a Certidão de Débitos Relativos a Créditos Tributários da Receita Federal. Art. 2º, inciso I da Portaria 410/2025.',
+  },
+  {
+    chave: 'regularidade_dief',
+    id: 'DOC-13',
+    titulo: 'Regularidade DIEF/GIA-ST',
+    criterio: 'Declarações DIEF e GIA-ST entregues e sem pendências',
+    dica: 'Verificar no sistema DIEF se todas as declarações do período estão entregues e sem pendências de retificação. Em caso de substituto tributário, verificar também a regularidade das GIA-ST. Art. 3º, inciso II da Portaria 410/2025.',
+  },
+  {
+    chave: 'grupo_economico',
+    id: 'DOC-14',
+    titulo: 'Declaração de grupo econômico',
+    criterio: 'Declaração identificando todos os estabelecimentos do grupo',
+    dica: 'Declaração firmada pelo representante legal identificando todos os estabelecimentos do mesmo grupo econômico, conforme definição do Art. 3º, §1º da Portaria 410/2025. Verificar se os CNPJs listados constam como relacionados no sistema.',
   },
 ]
 
@@ -288,8 +342,15 @@ export default function AnalisePage() {
       }
       if (docAnalise?.resultado_json) {
         const rj = docAnalise.resultado_json as any
-        if ('contrato_social' in rj && 'checked' in (rj.contrato_social ?? {})) {
-          setChecklistDocs(rj as ChecklistManual)
+        // Aceita novo formato (chave 'cnae') ou formato legado (chave 'contrato_social')
+        if (
+          ('cnae' in rj && 'checked' in (rj.cnae ?? {})) ||
+          ('contrato_social' in rj && 'checked' in (rj.contrato_social ?? {}))
+        ) {
+          // Mescla com o inicial para preencher chaves novas ausentes
+          const inicial = checklistInicial()
+          const merged = { ...inicial, ...rj } as ChecklistManual
+          setChecklistDocs(merged)
         }
       }
       setCarregando(false)
