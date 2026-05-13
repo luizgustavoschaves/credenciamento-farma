@@ -41,17 +41,24 @@ function logoBase64(): string {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Converte texto do parecer em HTML
+// Converte texto do parecer em HTML, substituindo marcadores pelas tabelas
 // ──────────────────────────────────────────────────────────────────────────────
 
 const RE_SECAO = /^(I{1,3}V?|VI{0,3}|IX|X)\s*[—–-]\s*.+$/
 
-function parecerParaHtml(texto: string): string {
+function parecerParaHtml(
+  texto: string,
+  tabela1Html: string = '',
+  tabela2Html: string = ''
+): string {
   if (!texto) return '<p class="corpo">(parecer não disponível)</p>'
 
   return texto.trim().split('\n').map(l => {
     const t = l.trim()
     if (!t) return '<div class="espaco"></div>'
+    // Substituição das tabelas no lugar dos marcadores
+    if (t === '[[TABELA1]]') return tabela1Html
+    if (t === '[[TABELA2]]') return tabela2Html
     const e = esc(t)
     if (RE_SECAO.test(t))   return `<h4 class="secao">${e}</h4>`
     if (/^REQ-\d/.test(t))  return `<p class="req">${e}</p>`
@@ -84,7 +91,7 @@ function gerarTabela1(resultado: ResultadoAnalise): string {
   }).join('')
 
   return `
-    <div class="tabela-bloco quebra-pagina">
+    <div class="tabela-bloco">
       <p class="tabela-titulo">Tabela 1 — Faturamento nos Últimos 12 Meses</p>
       <table class="tabela-dados">
         <thead>
@@ -641,12 +648,15 @@ export async function GET(req: NextRequest) {
   const checklist    = docAnalise?.resultado_json as Record<string, { checked: boolean }> | null
 
   // Gerar tabelas
+  // Tabela 1 e 2 são injetadas dentro do texto do parecer (via marcadores [[TABELA1]] e [[TABELA2]])
+  // Tabela 3 (checklist) vai após o parecer, antes da assinatura
+  let tabela1Html = ''
+  let tabela2Html = ''
   let tabelasHtml = ''
   if (resultado) {
-    tabelasHtml =
-      gerarTabela1(resultado) +
-      gerarTabela2(resultado) +
-      gerarTabela3(resultado, checklist)
+    tabela1Html = gerarTabela1(resultado)
+    tabela2Html = gerarTabela2(resultado)
+    tabelasHtml = gerarTabela3(resultado, checklist)
   }
 
   const assunto = pedido.tipo === 'credenciamento'
@@ -661,7 +671,7 @@ export async function GET(req: NextRequest) {
     cnpj:         fmtCnpj(pedido.cnpj     ?? ''),
     ie:           pedido.inscricao_estadual ?? '',
     assunto,
-    parecerHtml:  parecerParaHtml(textoParecer),
+    parecerHtml:  parecerParaHtml(textoParecer, tabela1Html, tabela2Html),
     tabelasHtml,
     matricula,
   })

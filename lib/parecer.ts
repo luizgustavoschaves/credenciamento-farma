@@ -211,24 +211,7 @@ export function gerarParecerFallback(resultado: ResultadoAnalise): string {
   )
   linhas.push('')
 
-  // REQ-4 (sem nomenclatura)
-  const r4ok = req4.resultado === 'aprovado'
-  linhas.push(`Regularidade do faturamento (Art. 3º, III): ${r4ok ? 'ATENDIDO' : 'NÃO ATENDIDO'}`)
-  if (r4ok) {
-    linhas.push(
-      `Não foram identificadas sequências de três ou mais meses consecutivos em que as saídas tenham sido ` +
-      `inferiores às entradas. A maior sequência consecutiva registrada foi de ${req4.detalhe.maior_sequencia} mês(es).`
-    )
-  } else {
-    linhas.push(
-      `Constatou-se sequência de ${req4.detalhe.maior_sequencia} meses consecutivos com saídas inferiores às entradas, ` +
-      `o que contraria o disposto no art. 3º, III, da Portaria GABIN nº 410/2025. ` +
-      `Meses com irregularidade: ${req4.detalhe.meses_com_saidas_menor_entradas.join(', ')}.`
-    )
-  }
-  linhas.push('')
-
-  // REQ-5 (sem nomenclatura)
+  // REQ-5 (antes do REQ-4, conforme solicitado)
   const r5ok = req5.resultado === 'aprovado'
   linhas.push(`Faturamento mínimo (Art. 3º, IV): ${r5ok ? 'ATENDIDO' : 'NÃO ATENDIDO'}`)
   if (req5.detalhe.inicio_atividade) {
@@ -243,6 +226,25 @@ export function gerarParecerFallback(resultado: ResultadoAnalise): string {
       `(mínimo exigido: ${fmtBRL(req5.detalhe.minimo_exigido)}).`
     )
   }
+  linhas.push('[[TABELA1]]')
+  linhas.push('')
+
+  // REQ-4
+  const r4ok = req4.resultado === 'aprovado'
+  linhas.push(`Regularidade do faturamento (Art. 3º, III): ${r4ok ? 'ATENDIDO' : 'NÃO ATENDIDO'}`)
+  if (r4ok) {
+    linhas.push(
+      `Não foram identificadas sequências de três ou mais meses consecutivos em que as saídas tenham sido ` +
+      `inferiores às entradas. A maior sequência consecutiva registrada foi de ${req4.detalhe.maior_sequencia} mês(es).`
+    )
+  } else {
+    linhas.push(
+      `Constatou-se sequência de ${req4.detalhe.maior_sequencia} meses consecutivos com saídas inferiores às entradas, ` +
+      `o que contraria o disposto no art. 3º, III, da Portaria GABIN nº 410/2025. ` +
+      `Meses com irregularidade: ${req4.detalhe.meses_com_saidas_menor_entradas.join(', ')}.`
+    )
+  }
+  linhas.push('[[TABELA2]]')
   linhas.push('')
 
   // REQ-6 (sem nomenclatura)
