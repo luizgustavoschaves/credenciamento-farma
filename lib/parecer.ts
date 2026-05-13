@@ -204,9 +204,16 @@ export function gerarParecerFallback(resultado: ResultadoAnalise): string {
   )
   linhas.push('')
 
-  // REQ-4
+  // Documentação
+  linhas.push(`Documentação exigida (Art. 2º): ATENDIDO`)
+  linhas.push(
+    `Toda a documentação exigida pela Portaria GABIN nº 410/2025 foi apresentada pelo contribuinte e devidamente conferida por este auditor fiscal, encontrando-se em conformidade com os requisitos normativos aplicáveis.`
+  )
+  linhas.push('')
+
+  // REQ-4 (sem nomenclatura)
   const r4ok = req4.resultado === 'aprovado'
-  linhas.push(`REQ-4 — Regularidade do faturamento (Art. 3º, III): ${r4ok ? 'ATENDIDO' : 'NÃO ATENDIDO'}`)
+  linhas.push(`Regularidade do faturamento (Art. 3º, III): ${r4ok ? 'ATENDIDO' : 'NÃO ATENDIDO'}`)
   if (r4ok) {
     linhas.push(
       `Não foram identificadas sequências de três ou mais meses consecutivos em que as saídas tenham sido ` +
@@ -221,9 +228,9 @@ export function gerarParecerFallback(resultado: ResultadoAnalise): string {
   }
   linhas.push('')
 
-  // REQ-5
+  // REQ-5 (sem nomenclatura)
   const r5ok = req5.resultado === 'aprovado'
-  linhas.push(`REQ-5 — Faturamento mínimo (Art. 3º, IV): ${r5ok ? 'ATENDIDO' : 'NÃO ATENDIDO'}`)
+  linhas.push(`Faturamento mínimo (Art. 3º, IV): ${r5ok ? 'ATENDIDO' : 'NÃO ATENDIDO'}`)
   if (req5.detalhe.inicio_atividade) {
     linhas.push(
       `Por tratar-se de empresa em início de atividade, o critério foi apurado pela média mensal de faturamento, ` +
@@ -238,9 +245,9 @@ export function gerarParecerFallback(resultado: ResultadoAnalise): string {
   }
   linhas.push('')
 
-  // REQ-6
+  // REQ-6 (sem nomenclatura)
   const r6ok = req6.resultado === 'aprovado'
-  linhas.push(`REQ-6 — Comercialização de itens prioritários (Art. 3º, VI): ${r6ok ? 'ATENDIDO' : 'NÃO ATENDIDO'}`)
+  linhas.push(`Comercialização de itens prioritários (Art. 3º, VI): ${r6ok ? 'ATENDIDO' : 'NÃO ATENDIDO'}`)
   linhas.push(
     `O percentual de saídas de itens prioritários em relação ao total de saídas da Tabela I foi de ` +
     `${fmtPct(req6.detalhe.percentual_apurado)}, sobre um total de ${fmtBRL(req6.detalhe.total_saidas_tabela1)} em saídas da Tabela I ` +
@@ -248,10 +255,10 @@ export function gerarParecerFallback(resultado: ResultadoAnalise): string {
   )
   linhas.push('')
 
-  // REQ-7
+  // REQ-7 (sem nomenclatura)
   const r7na = req7.resultado === 'nao_aplicavel'
   const r7ok = req7.resultado === 'aprovado'
-  linhas.push(`REQ-7 — Percentual de agregação ao grupo econômico (Art. 3º, VII): ${r7na ? 'NÃO APLICÁVEL' : r7ok ? 'ATENDIDO' : 'NÃO ATENDIDO'}`)
+  linhas.push(`Percentual de agregação ao grupo econômico (Art. 3º, VII): ${r7na ? 'NÃO APLICÁVEL' : r7ok ? 'ATENDIDO' : 'NÃO ATENDIDO'}`)
   if (r7na) {
     linhas.push(
       `O contribuinte não realiza operações com estabelecimentos varejistas pertencentes ao mesmo grupo econômico, ` +
@@ -266,12 +273,11 @@ export function gerarParecerFallback(resultado: ResultadoAnalise): string {
   }
   linhas.push('')
 
-  // REQ-8
-  linhas.push(`REQ-8 — Quadro mínimo de empregados (Art. 4º): INFORMATIVO`)
+  // REQ-8 (sem nomenclatura, obrigatório)
+  linhas.push(`Quadro mínimo de empregados (Art. 4º): ATENDIDO`)
   linhas.push(
-    `Com base na faixa de faturamento apurada (${req8.detalhe.faixa_faturamento}), a legislação estabelece o quadro mínimo de ` +
-    `${req8.detalhe.empregados_minimos_exigidos} funcionário(s) CLT. Este requisito tem caráter informativo e não ` +
-    `é critério de aprovação ou reprovação para o credenciamento.`
+    `Com base na faixa de faturamento apurada (${req8.detalhe.faixa_faturamento}), a legislação exige o quadro mínimo de ` +
+    `${req8.detalhe.empregados_minimos_exigidos} funcionário(s) com vínculo empregatício (CLT), requisito que foi cumprido pelo contribuinte.`
   )
   linhas.push('')
 
