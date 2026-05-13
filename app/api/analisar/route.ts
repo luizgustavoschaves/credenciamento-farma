@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executarAnalise } from '@/lib/regras'
-import { gerarParecer, gerarParecerFallback } from '@/lib/parecer'
+import { gerarParecerFallback } from '@/lib/parecer'
 import { supabase } from '@/lib/supabase'
 import {
   LinhaFaturamentoMensal,
@@ -53,16 +53,9 @@ export async function POST(req: NextRequest) {
       saidasGrupo: saidasGrupo ?? [],
     })
 
-    // 2. Gerar parecer com IA (Haiku), com fallback automático se indisponível
-    let textoParecer: string
-    let parecerGeradoPorIA = true
-    try {
-      textoParecer = await gerarParecer(resultado)
-    } catch (errIA) {
-      console.warn('API indisponível, usando parecer offline:', errIA)
-      textoParecer = gerarParecerFallback(resultado)
-      parecerGeradoPorIA = false
-    }
+    // 2. Gerar parecer offline (sem custo de API)
+    const textoParecer = gerarParecerFallback(resultado)
+    const parecerGeradoPorIA = false
 
     // 3. Persistir no Supabase
     const { data: pedido, error: errPedido } = await supabase
