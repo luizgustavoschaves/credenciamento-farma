@@ -15,3 +15,7 @@ CREATE TABLE IF NOT EXISTS documentos_analise (
   resultado_json jsonb NOT NULL,
   created_at    timestamptz DEFAULT now()
 );
+
+-- Garante acesso via Data API (supabase-js) — obrigatório para tabelas
+-- criadas após outubro de 2025 em projetos existentes
+GRANT ALL ON documentos_analise TO anon, authenticated, service_role;

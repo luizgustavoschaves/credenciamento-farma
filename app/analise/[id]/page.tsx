@@ -84,15 +84,63 @@ type ChaveDoc =
 
 type ChecklistManual = Record<ChaveDoc, { checked: boolean }>
 
-const DOCS_CONFIG: { chave: ChaveDoc; id: string; titulo: string; criterio: string }[] = [
-  { chave: 'contrato_social',      id: 'DOC-1', titulo: 'Contrato Social',                           criterio: 'Objeto social inclui atacado farmacêutico; constituição regular' },
-  { chave: 'docs_socios',          id: 'DOC-2', titulo: 'Docs. Pessoais dos Sócios/Diretores',       criterio: 'RG, CPF, CNH ou passaporte de todos os sócios do contrato social' },
-  { chave: 'imovel',               id: 'DOC-3', titulo: 'Registro de Imóvel ou Contrato de Locação', criterio: 'Endereço confere com o estabelecimento credenciado' },
-  { chave: 'comprovante_endereco', id: 'DOC-4', titulo: 'Comprovante de Endereço',                   criterio: 'Mês anterior ao pedido; endereço bate com o imóvel/locação' },
-  { chave: 'ir_socios',            id: 'DOC-5', titulo: 'Imposto de Renda dos Sócios (3 últimos)',   criterio: 'Declarações dos últimos 3 anos de todos os sócios' },
-  { chave: 'rais_gfip',            id: 'DOC-6', titulo: 'RAIS ou GFIP',                              criterio: 'Quadro de funcionários CLT atinge o mínimo exigido pelo REQ-8' },
-  { chave: 'contrato_contador',    id: 'DOC-7', titulo: 'Contrato do Contador + DHP',                criterio: 'Contrato vigente no mês do pedido; DHP do contador em dia' },
-  { chave: 'licenca_anvisa',       id: 'DOC-8', titulo: 'Licença ANVISA',                            criterio: 'Autorização de funcionamento vigente (vencimento posterior ao pedido)' },
+const DOCS_CONFIG: { chave: ChaveDoc; id: string; titulo: string; criterio: string; dica: string }[] = [
+  {
+    chave: 'contrato_social',
+    id: 'DOC-1',
+    titulo: 'Contrato Social',
+    criterio: 'Objeto social inclui atacado farmacêutico; constituição regular',
+    dica: 'Analisar o objeto social da empresa e a data de constituição.',
+  },
+  {
+    chave: 'docs_socios',
+    id: 'DOC-2',
+    titulo: 'Documentos Pessoais dos Sócios ou Diretores',
+    criterio: 'RG, CPF, CNH ou passaporte de todos os sócios do contrato social',
+    dica: 'Verificar se a pessoa identificada no documento está nominada no contrato social.',
+  },
+  {
+    chave: 'imovel',
+    id: 'DOC-3',
+    titulo: 'Registro de Imóvel ou Contrato de Locação',
+    criterio: 'Endereço confere com o estabelecimento credenciado',
+    dica: 'Verificar se o endereço do imóvel ou da locação corresponde ao do estabelecimento.',
+  },
+  {
+    chave: 'comprovante_endereco',
+    id: 'DOC-4',
+    titulo: 'Comprovante de Endereço',
+    criterio: 'Mês anterior ao pedido; endereço bate com o imóvel/locação',
+    dica: 'Deve ser a última conta de energia elétrica ou outro comprovante emitido no mês anterior ao pedido. Verificar se o endereço bate com o do registro de imóvel ou contrato de locação.',
+  },
+  {
+    chave: 'ir_socios',
+    id: 'DOC-5',
+    titulo: 'Imposto de Renda dos Sócios (3 últimos anos)',
+    criterio: 'Declarações dos últimos 3 anos de todos os sócios',
+    dica: 'Verificar se as pessoas constantes nas declarações de IR são as mesmas listadas como sócias no contrato social.',
+  },
+  {
+    chave: 'rais_gfip',
+    id: 'DOC-6',
+    titulo: 'RAIS ou documento substituto',
+    criterio: 'Quadro de funcionários CLT atinge o mínimo exigido pelo faturamento',
+    dica: 'Relação Anual de Informações Sociais (RAIS) ou outro documento equivalente. Verificar a quantidade de funcionários declarados e se está condizente com o mínimo exigido pela faixa de faturamento apurada.',
+  },
+  {
+    chave: 'contrato_contador',
+    id: 'DOC-7',
+    titulo: 'Contrato do Contador + DHP',
+    criterio: 'Contrato vigente no mês do pedido; DHP do contador em dia',
+    dica: 'Contrato de prestação de serviços contábeis firmado com a empresa atacadista, acompanhado da Declaração de Habilitação Profissional (DHP) do contabilista. Verificar se o contrato está vigente na data do pedido de credenciamento.',
+  },
+  {
+    chave: 'licenca_anvisa',
+    id: 'DOC-8',
+    titulo: 'Licença da ANVISA',
+    criterio: 'Autorização de funcionamento vigente (vencimento posterior ao pedido)',
+    dica: 'Autorização de Funcionamento emitida pela Agência Nacional de Vigilância Sanitária (ANVISA). Verificar se a licença está vigente na data do pedido.',
+  },
 ]
 
 function checklistInicial(): ChecklistManual {
@@ -134,7 +182,7 @@ function ChecklistDocumental({
         {totalMarcados}/{DOCS_CONFIG.length} documentos verificados
       </p>
 
-      {DOCS_CONFIG.map(({ chave, id, titulo, criterio }) => {
+      {DOCS_CONFIG.map(({ chave, id, titulo, dica }) => {
         const checked = itens[chave].checked
         return (
           <label
@@ -151,13 +199,21 @@ function ChecklistDocumental({
               className="mt-0.5 h-4 w-4 rounded accent-green-600 flex-shrink-0 cursor-pointer"
             />
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs font-bold text-gray-400">{id}</span>
                 <span className={`text-sm font-semibold ${checked ? 'text-green-700' : 'text-gray-800'}`}>
                   {titulo}
                 </span>
+                {/* Ícone de dica */}
+                <span className="relative group flex-shrink-0" onClick={e => e.preventDefault()}>
+                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-xs font-bold cursor-default select-none hover:bg-blue-100 hover:text-blue-600 transition-colors">
+                    ?
+                  </span>
+                  <span className="absolute left-0 top-5 z-10 hidden group-hover:block w-72 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg leading-relaxed">
+                    {dica}
+                  </span>
+                </span>
               </div>
-              <p className="text-xs text-gray-400 mt-0.5">{criterio}</p>
             </div>
             {checked && <span className="text-green-500 text-base flex-shrink-0">✓</span>}
           </label>
