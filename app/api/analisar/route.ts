@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
       inscricaoEstadual,
       numeroIF,
       numeroProcesso,
+      inicioAtividade,
       faturamentoMensal,
       movimentacaoNcm,
       saidasGrupo,
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
       inscricaoEstadual?: string
       numeroIF?: string
       numeroProcesso?: string
+      inicioAtividade?: boolean
       faturamentoMensal: LinhaFaturamentoMensal[]
       movimentacaoNcm: LinhaMovimentacaoNCM[]
       saidasGrupo: LinhaSaidasGrupoEconomico[]
@@ -51,6 +53,7 @@ export async function POST(req: NextRequest) {
       faturamentoMensal,
       movimentacaoNcm,
       saidasGrupo: saidasGrupo ?? [],
+      inicioAtividadeManual: inicioAtividade ?? false,
     })
 
     // 2. Gerar parecer offline (sem custo de API)

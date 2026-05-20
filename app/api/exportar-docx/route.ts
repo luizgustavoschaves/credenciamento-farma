@@ -391,6 +391,7 @@ function parecerToElements(
 export async function GET(req: NextRequest) {
   const pedidoId  = req.nextUrl.searchParams.get('id')
   const matricula = req.nextUrl.searchParams.get('matricula') ?? ''
+  const nome      = req.nextUrl.searchParams.get('nome') ?? ''
   if (!pedidoId)
     return NextResponse.json({ erro: 'id obrigatório' }, { status: 400 })
 
@@ -558,8 +559,15 @@ export async function GET(req: NextRequest) {
       indent:    { left: 2400, right: 2400 },
       border:    { top: { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 6 } },
       spacing:   { before: 0, after: 60 },
-      children:  [run('Auditor Fiscal da Receita Estadual', { bold: true, size: PT10 })],
+      children:  [run(nome || 'Auditor Fiscal da Receita Estadual', { bold: true, size: PT10 })],
     }),
+    ...(nome
+      ? [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing:   { before: 0, after: 60 },
+          children:  [run('Auditor Fiscal da Receita Estadual', { bold: true, size: PT10 })],
+        })]
+      : []),
     ...(matricula
       ? [new Paragraph({
           alignment: AlignmentType.CENTER,

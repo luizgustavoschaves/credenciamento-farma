@@ -332,8 +332,9 @@ export default function HomePage() {
   const [dataPedido, setDataPedido]        = useState('')   // formato AAAA-MM
   const [numeroIF, setNumeroIF]            = useState('')   // ex: 49/2026
   const [numeroProcesso, setNumeroProcesso]= useState('')   // ex: 001234/2026
-  const [grupoEconomico, setGrupo]         = useState(false)
-  const [cnpjsGrupo, setCnpjsGrupo]        = useState<string[]>([''])
+  const [inicioAtividade, setInicioAtividade] = useState(false)
+  const [grupoEconomico, setGrupo]            = useState(false)
+  const [cnpjsGrupo, setCnpjsGrupo]          = useState<string[]>([''])
 
   const [csv1, setCsv1] = useState<File | null>(null)
   const [csv2, setCsv2] = useState<File | null>(null)
@@ -407,6 +408,7 @@ export default function HomePage() {
         numeroProcesso:    numeroProcesso || undefined,
         tipo,
         dataPedido,
+        inicioAtividade,
         grupoEconomico,
         cnpjsGrupo:        cnpjsGrupoNorm,
         faturamentoMensal: normalizarFaturamento(rawFat),
@@ -554,6 +556,24 @@ export default function HomePage() {
                 </p>
               )}
             </div>
+          </div>
+
+            {/* Início de atividade */}
+          <div className="border-t border-gray-100 pt-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={inicioAtividade}
+                onChange={e => setInicioAtividade(e.target.checked)}
+                className="w-4 h-4 accent-sefaz-blue"
+              />
+              <span className="text-sm font-medium text-gray-800">
+                Empresa em início de atividade
+              </span>
+            </label>
+            <p className="text-xs text-gray-400 mt-1 ml-7">
+              Marque se a empresa ainda não completou 12 meses de operação. Se deferido, o credenciamento terá validade de 6 meses, conforme Portaria GABIN nº 410/2025.
+            </p>
           </div>
 
           {/* Grupo econômico */}

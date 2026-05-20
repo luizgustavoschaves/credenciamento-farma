@@ -254,6 +254,7 @@ function montarHtml(p: {
   parecerHtml: string
   tabelasHtml: string
   matricula: string
+  nome: string
 }): string {
   const logoTag = p.logoSrc
     ? `<img src="${p.logoSrc}" class="logo" alt="Brasão MA">`
@@ -554,6 +555,7 @@ function montarHtml(p: {
   <!-- Assinatura -->
   <div class="assinatura">
     <div class="assinatura-linha"></div>
+    ${p.nome ? `<div class="assinatura-cargo">${esc(p.nome)}</div>` : ''}
     <div class="assinatura-cargo">Auditor Fiscal da Receita Estadual</div>
     ${p.matricula ? `<div class="assinatura-matricula">Matrícula: ${esc(p.matricula)}</div>` : ''}
   </div>
@@ -576,6 +578,7 @@ function montarHtml(p: {
 export async function GET(req: NextRequest) {
   const pedidoId  = req.nextUrl.searchParams.get('id')
   const matricula = req.nextUrl.searchParams.get('matricula') ?? ''
+  const nome      = req.nextUrl.searchParams.get('nome') ?? ''
   if (!pedidoId)
     return NextResponse.json({ erro: 'id obrigatório' }, { status: 400 })
 
@@ -648,6 +651,7 @@ export async function GET(req: NextRequest) {
     parecerHtml:  parecerParaHtml(textoParecer, tabela1Html, tabela2Html),
     tabelasHtml,
     matricula,
+    nome,
   })
 
   return new NextResponse(html, {

@@ -86,6 +86,9 @@ export interface ResultadoAnalise {
   conclusao: 'deferido' | 'indeferido'
   motivos_indeferimento: string[]
 
+  // Início de atividade marcado manualmente pelo auditor (credenciamento por 6 meses)
+  inicio_atividade_manual?: boolean
+
   // Dados mensais para geração de tabelas no PDF
   dados_mensais: DadosMensais[]
 }

@@ -506,7 +506,7 @@ export default function AnalisePage() {
                 title="Informe sua matrícula funcional antes de exportar"
               />
               <a
-                href={`/api/exportar-pdf?id=${id}${matricula ? `&matricula=${encodeURIComponent(matricula)}` : ''}`}
+                href={`/api/exportar-pdf?id=${id}${matricula ? `&matricula=${encodeURIComponent(matricula)}` : ''}${auditor ? `&nome=${encodeURIComponent(auditor)}` : ''}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1 bg-sefaz-blue text-white text-xs font-semibold
@@ -516,7 +516,7 @@ export default function AnalisePage() {
                 📄 Exportar PDF
               </a>
               <a
-                href={`/api/exportar-docx?id=${id}${matricula ? `&matricula=${encodeURIComponent(matricula)}` : ''}`}
+                href={`/api/exportar-docx?id=${id}${matricula ? `&matricula=${encodeURIComponent(matricula)}` : ''}${auditor ? `&nome=${encodeURIComponent(auditor)}` : ''}`}
                 className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-700 text-white text-xs font-semibold
                   rounded-lg hover:bg-green-900 transition-colors"
                 title="Exportar como documento Word (.docx)"

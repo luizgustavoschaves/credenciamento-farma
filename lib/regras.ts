@@ -54,6 +54,19 @@ function filtrarPorPeriodo<T extends { competencia: string }>(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Descarta meses com saídas zero ANTES do primeiro mês com faturamento real.
+// Ex: se Jan–Mai têm saídas = 0 e Jun tem saídas > 0, descarta Jan–Mai.
+// Isso evita penalizar empresas em início de atividade que ainda não operavam.
+// ──────────────────────────────────────────────────────────────────────────────
+
+function descartarMesesZeradosIniciais(linhas: LinhaFaturamentoMensal[]): LinhaFaturamentoMensal[] {
+  const ordenado = [...linhas].sort((a, b) => compararCompetencia(a.competencia, b.competencia))
+  const primeiro = ordenado.findIndex(l => l.valor_total_saidas > 0)
+  if (primeiro <= 0) return ordenado   // nenhum mês zerado inicial ou array vazio
+  return ordenado.slice(primeiro)       // mantém a partir do primeiro com faturamento
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // REQ-4 — Art. 3º, III — Faturamento x Entradas (3 meses consecutivos)
 // Impedimento: 3 ou mais meses consecutivos com saídas < entradas nos últimos 12 meses
 // ──────────────────────────────────────────────────────────────────────────────
@@ -102,12 +115,13 @@ function verificarReq4(linhas: LinhaFaturamentoMensal[]) {
 const FATURAMENTO_ANUAL_MIN = 4_000_000
 const MEDIA_MENSAL_MIN = 333_333.33
 
-function verificarReq5(linhas: LinhaFaturamentoMensal[]) {
+function verificarReq5(linhas: LinhaFaturamentoMensal[], inicioAtividadeManual?: boolean) {
   const ordenado = [...linhas].sort((a, b) => compararCompetencia(a.competencia, b.competencia))
   const totalFaturamento = ordenado.reduce((s, l) => s + l.valor_total_saidas, 0)
   const meses = ordenado.length
   const mediaFaturamento = meses > 0 ? totalFaturamento / meses : 0
-  const inicioAtividade = meses < 12
+  // Início de atividade: menos de 12 meses de dados OU marcado manualmente pelo auditor
+  const inicioAtividade = inicioAtividadeManual === true || meses < 12
 
   const minimo = inicioAtividade ? MEDIA_MENSAL_MIN : FATURAMENTO_ANUAL_MIN
   const valorParaComparar = inicioAtividade ? mediaFaturamento : totalFaturamento
@@ -251,17 +265,20 @@ export function executarAnalise(params: {
   faturamentoMensal: LinhaFaturamentoMensal[]
   movimentacaoNcm: LinhaMovimentacaoNCM[]
   saidasGrupo: LinhaSaidasGrupoEconomico[]
+  inicioAtividadeManual?: boolean
 }): ResultadoAnalise {
-  const { cnpj, tipo, dataPedido, faturamentoMensal, movimentacaoNcm, saidasGrupo } = params
+  const { cnpj, tipo, dataPedido, faturamentoMensal, movimentacaoNcm, saidasGrupo, inicioAtividadeManual } = params
 
   // Filtra apenas os 12 meses anteriores à data do pedido
-  const periodo = competencias12Meses(dataPedido)
-  const fat12m  = filtrarPorPeriodo(faturamentoMensal, periodo)
-  const ncm12m  = filtrarPorPeriodo(movimentacaoNcm,   periodo)
-  const grp12m  = filtrarPorPeriodo(saidasGrupo,       periodo)
+  const periodo    = competencias12Meses(dataPedido)
+  const fat12mRaw  = filtrarPorPeriodo(faturamentoMensal, periodo)
+  // Descarta meses zerados antes do primeiro mês com faturamento real
+  const fat12m     = descartarMesesZeradosIniciais(fat12mRaw)
+  const ncm12m     = filtrarPorPeriodo(movimentacaoNcm,   periodo)
+  const grp12m     = filtrarPorPeriodo(saidasGrupo,       periodo)
 
   const req4 = verificarReq4(fat12m)
-  const req5 = verificarReq5(fat12m)
+  const req5 = verificarReq5(fat12m, inicioAtividadeManual)
   const req6 = verificarReq6(ncm12m)
   const req7 = verificarReq7(grp12m, ncm12m)
   const req8 = calcularReq8(req5.detalhe.media_mensal)
@@ -318,6 +335,7 @@ export function executarAnalise(params: {
     req8,
     conclusao: reprovados.length === 0 ? 'deferido' : 'indeferido',
     motivos_indeferimento: reprovados,
+    inicio_atividade_manual: inicioAtividadeManual ?? false,
     dados_mensais: dadosMensais,
   }
 }

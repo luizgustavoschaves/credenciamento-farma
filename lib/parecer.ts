@@ -168,7 +168,7 @@ Escreva apenas o texto da Informação Fiscal, começando diretamente por "I —
  * Gera um parecer padrão sem uso de IA, como fallback quando a API não está disponível.
  */
 export function gerarParecerFallback(resultado: ResultadoAnalise): string {
-  const { cnpj, tipo, req4, req5, req6, req7, req8, conclusao, motivos_indeferimento } = resultado
+  const { cnpj, tipo, req4, req5, req6, req7, req8, conclusao, motivos_indeferimento, inicio_atividade_manual } = resultado
   const tipoStr = tipo === 'credenciamento' ? 'credenciamento' : 'renovação de credenciamento'
   const dataStr = new Date(resultado.data_analise).toLocaleDateString('pt-BR')
   const deferido = conclusao === 'deferido'
@@ -287,11 +287,20 @@ export function gerarParecerFallback(resultado: ResultadoAnalise): string {
   linhas.push('IV — DO DISPOSITIVO')
   linhas.push('')
   if (deferido) {
-    linhas.push(
-      `Diante do exposto, tendo sido verificado o atendimento de todos os requisitos obrigatórios previstos na ` +
-      `Portaria GABIN nº 410/2025, manifesto-me pelo DEFERIMENTO do pedido de ${tipoStr} formulado pelo ` +
-      `contribuinte inscrito no CNPJ ${cnpj}.`
-    )
+    if (inicio_atividade_manual) {
+      linhas.push(
+        `Diante do exposto, tendo sido verificado o atendimento de todos os requisitos obrigatórios previstos na ` +
+        `Portaria GABIN nº 410/2025, e considerando que o contribuinte se enquadra como empresa em início de atividade, ` +
+        `manifesto-me pelo DEFERIMENTO do pedido de ${tipoStr} formulado pelo contribuinte inscrito no CNPJ ${cnpj}, ` +
+        `com validade de 6 (seis) meses, conforme previsto na Portaria GABIN nº 410/2025.`
+      )
+    } else {
+      linhas.push(
+        `Diante do exposto, tendo sido verificado o atendimento de todos os requisitos obrigatórios previstos na ` +
+        `Portaria GABIN nº 410/2025, manifesto-me pelo DEFERIMENTO do pedido de ${tipoStr} formulado pelo ` +
+        `contribuinte inscrito no CNPJ ${cnpj}.`
+      )
+    }
   } else {
     linhas.push(
       `Diante do exposto, tendo sido constatado o descumprimento dos requisitos obrigatórios abaixo indicados, ` +
