@@ -276,8 +276,9 @@ function normalizarNFeEntradas(rows: string[][]): LinhaMovimentacaoGTIN[] {
     const r = rows[i]
     if (!r || r.length < 29) continue
 
-    if (r[NFE.STATUS]?.trim()  !== 'AUTORIZADO') continue
-    if (r[NFE.TIPO_OP]?.trim() !== 'ENTRADA')    continue
+    // CSV3 é um relatório de entradas — o campo TIPO_OP pode vir como "SAÍDA"
+    // (perspectiva do emitente/fornecedor), por isso não filtramos por tipo de operação
+    if (r[NFE.STATUS]?.trim() !== 'AUTORIZADO') continue
 
     const gtin = r[gtinCol]?.trim() ?? ''
     if (!gtinValido(gtin)) continue
