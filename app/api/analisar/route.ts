@@ -82,7 +82,11 @@ export async function POST(req: NextRequest) {
 
     if (errPedido || !pedido) {
       console.error('Erro ao salvar pedido:', errPedido)
-      return NextResponse.json({ erro: 'Erro ao salvar pedido no banco de dados' }, { status: 500 })
+      return NextResponse.json({
+        erro: 'Erro ao salvar pedido no banco de dados',
+        detalhe: errPedido?.message ?? 'sem detalhe',
+        codigo: errPedido?.code ?? null,
+      }, { status: 500 })
     }
 
     const { error: errParecer } = await supabase
