@@ -7,6 +7,7 @@ import {
   LinhaFaturamentoMensal,
   LinhaMovimentacaoNCM,
   LinhaSaidasGrupoEconomico,
+  LinhaMovimentacaoGTIN,
   ResultadoAnalise,
   ResultadoRequisito,
   DetalheReq4,
@@ -17,12 +18,10 @@ import {
   DadosMensais,
 } from './types'
 import {
-  buscarItemPorNCM,
   isPrioritario,
   isTabela1,
   calcularEmpregadosMinimos,
   descricaoFaixa,
-  normalizarNCM,
 } from './tabela1'
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -183,45 +182,45 @@ function verificarReq6(linhas: LinhaMovimentacaoNCM[]) {
 
 // ──────────────────────────────────────────────────────────────────────────────
 // REQ-7 — Art. 3º, VII — 30% de agregação nas vendas para varejistas do grupo
-// CMV estimado: custo médio por NCM = entradas_ncm / saidas_ncm (do CSV 2)
+// CMV estimado por GTIN: custo_ratio = Σ_entradas_gtin / Σ_saidas_gtin (período)
 // ──────────────────────────────────────────────────────────────────────────────
 
 const PERCENTUAL_MINIMO_AGREGACAO = 30
 
 function verificarReq7(
   linhasGrupo: LinhaSaidasGrupoEconomico[],
-  linhasNcm: LinhaMovimentacaoNCM[]
+  movimentacaoGTIN: LinhaMovimentacaoGTIN[]
 ) {
   // Se não há operações com grupo econômico, requisito não se aplica
   if (linhasGrupo.length === 0) {
     return { resultado: 'nao_aplicavel' as const, detalhe: null }
   }
 
-  // Calcular custo médio ponderado por NCM (entradas / saídas)
-  const custoMedioPorNcm: Record<string, number> = {}
+  // Custo médio por GTIN: razão entradas/saidas no período analisado
+  // (entradas = custo de compra; saidas = receita de venda ao mercado total)
+  const custoRatioPorGTIN: Record<string, number> = {}
 
-  const agrupadoPorNcm: Record<string, { entradas: number; saidas: number }> = {}
-  for (const l of linhasNcm) {
-    const key = normalizarNCM(l.ncm)
-    if (!agrupadoPorNcm[key]) agrupadoPorNcm[key] = { entradas: 0, saidas: 0 }
-    agrupadoPorNcm[key].entradas += l.valor_total_entradas
-    agrupadoPorNcm[key].saidas  += l.valor_total_saidas
+  const agrupadoPorGTIN: Record<string, { entradas: number; saidas: number }> = {}
+  for (const l of movimentacaoGTIN) {
+    if (!agrupadoPorGTIN[l.gtin]) agrupadoPorGTIN[l.gtin] = { entradas: 0, saidas: 0 }
+    agrupadoPorGTIN[l.gtin].entradas += l.valor_entradas
+    agrupadoPorGTIN[l.gtin].saidas  += l.valor_saidas
   }
 
-  for (const [ncm, vals] of Object.entries(agrupadoPorNcm)) {
-    // Razão custo/receita (ex: 0.75 significa que o custo é 75% do preço de venda)
-    custoMedioPorNcm[ncm] = vals.saidas > 0 ? vals.entradas / vals.saidas : 0.8
+  for (const [gtin, vals] of Object.entries(agrupadoPorGTIN)) {
+    // Razão custo/receita (ex: 0.75 = custo é 75% do preço de venda)
+    // Fallback 0.8 quando não há dados de entrada para o GTIN
+    custoRatioPorGTIN[gtin] = vals.saidas > 0 ? vals.entradas / vals.saidas : 0.8
   }
 
   // Calcular CMV estimado para as saídas destinadas ao grupo econômico
   let totalSaidasGrupo = 0
-  let totalCmvEstimado  = 0
+  let totalCmvEstimado = 0
 
   for (const l of linhasGrupo) {
-    const key = normalizarNCM(l.ncm)
-    const razaoCusto = custoMedioPorNcm[key] ?? 0.8 // fallback: 80% de custo
-    totalSaidasGrupo  += l.valor_saidas_tabela1
-    totalCmvEstimado  += l.valor_saidas_tabela1 * razaoCusto
+    const razaoCusto = custoRatioPorGTIN[l.gtin] ?? 0.8   // fallback: 80% de custo
+    totalSaidasGrupo += l.valor_saidas_tabela1
+    totalCmvEstimado += l.valor_saidas_tabela1 * razaoCusto
   }
 
   const percentualAgregacao = totalCmvEstimado > 0
@@ -265,9 +264,10 @@ export function executarAnalise(params: {
   faturamentoMensal: LinhaFaturamentoMensal[]
   movimentacaoNcm: LinhaMovimentacaoNCM[]
   saidasGrupo: LinhaSaidasGrupoEconomico[]
+  movimentacaoGTIN: LinhaMovimentacaoGTIN[]
   inicioAtividadeManual?: boolean
 }): ResultadoAnalise {
-  const { cnpj, tipo, dataPedido, faturamentoMensal, movimentacaoNcm, saidasGrupo, inicioAtividadeManual } = params
+  const { cnpj, tipo, dataPedido, faturamentoMensal, movimentacaoNcm, saidasGrupo, movimentacaoGTIN, inicioAtividadeManual } = params
 
   // Filtra apenas os 12 meses anteriores à data do pedido
   const periodo    = competencias12Meses(dataPedido)
@@ -276,11 +276,12 @@ export function executarAnalise(params: {
   const fat12m     = descartarMesesZeradosIniciais(fat12mRaw)
   const ncm12m     = filtrarPorPeriodo(movimentacaoNcm,   periodo)
   const grp12m     = filtrarPorPeriodo(saidasGrupo,       periodo)
+  const gtin12m    = filtrarPorPeriodo(movimentacaoGTIN,  periodo)
 
   const req4 = verificarReq4(fat12m)
   const req5 = verificarReq5(fat12m, inicioAtividadeManual)
   const req6 = verificarReq6(ncm12m)
-  const req7 = verificarReq7(grp12m, ncm12m)
+  const req7 = verificarReq7(grp12m, gtin12m)
   const req8 = calcularReq8(req5.detalhe.media_mensal)
 
   // Dados mensais ordenados cronologicamente (para tabelas do PDF)

@@ -6,6 +6,7 @@ import {
   LinhaFaturamentoMensal,
   LinhaMovimentacaoNCM,
   LinhaSaidasGrupoEconomico,
+  LinhaMovimentacaoGTIN,
 } from '@/lib/types'
 
 export async function POST(req: NextRequest) {
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest) {
       faturamentoMensal,
       movimentacaoNcm,
       saidasGrupo,
+      movimentacaoGTIN,
     }: {
       cnpj: string
       tipo: 'credenciamento' | 'renovacao'
@@ -36,6 +38,7 @@ export async function POST(req: NextRequest) {
       faturamentoMensal: LinhaFaturamentoMensal[]
       movimentacaoNcm: LinhaMovimentacaoNCM[]
       saidasGrupo: LinhaSaidasGrupoEconomico[]
+      movimentacaoGTIN: LinhaMovimentacaoGTIN[]
     } = body
 
     if (!cnpj || !tipo || !dataPedido || !faturamentoMensal?.length || !movimentacaoNcm?.length) {
@@ -52,7 +55,8 @@ export async function POST(req: NextRequest) {
       dataPedido,
       faturamentoMensal,
       movimentacaoNcm,
-      saidasGrupo: saidasGrupo ?? [],
+      saidasGrupo:      saidasGrupo      ?? [],
+      movimentacaoGTIN: movimentacaoGTIN ?? [],
       inicioAtividadeManual: inicioAtividade ?? false,
     })
 

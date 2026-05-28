@@ -7,6 +7,7 @@ import {
   LinhaFaturamentoMensal,
   LinhaMovimentacaoNCM,
   LinhaSaidasGrupoEconomico,
+  LinhaMovimentacaoGTIN,
 } from '@/lib/types'
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -178,6 +179,7 @@ const NFE = {
 interface ResultadoNFe {
   movimentacaoNcm: LinhaMovimentacaoNCM[]
   saidasGrupo:     LinhaSaidasGrupoEconomico[]
+  gtinSaidas:      LinhaMovimentacaoGTIN[]      // saídas por GTIN (todos os clientes)
 }
 
 /**
@@ -185,9 +187,22 @@ interface ResultadoNFe {
  * Agrupa por período + NCM para REQ-6.
  * Filtra por CNPJ destinatário para extrair saídas ao grupo econômico (REQ-7).
  */
+/** Localiza o índice de uma coluna pelo nome (busca insensível a maiúsculas/acentos) */
+function encontrarColunaGTIN(header: string[]): number {
+  return header.findIndex(h => /c[oó]digo\s*gtin|^gtin$/i.test(h.trim()))
+}
+
+/** Testa se um GTIN é válido (não vazio, não "0", não "SEM GTIN") */
+function gtinValido(g: string): boolean {
+  return !!g && g !== '0' && !/sem\s*gtin/i.test(g)
+}
+
 function normalizarNFeEmitidas(rows: string[][], cnpjsGrupo: string[]): ResultadoNFe {
+  const gtinCol = encontrarColunaGTIN(rows[0] ?? [])
+
   const mapNcm:   Record<string, LinhaMovimentacaoNCM>      = {}
   const mapGrupo: Record<string, LinhaSaidasGrupoEconomico> = {}
+  const mapGTIN:  Record<string, LinhaMovimentacaoGTIN>     = {}
 
   // Linha 0 é o cabeçalho — pula
   for (let i = 1; i < rows.length; i++) {
@@ -201,27 +216,37 @@ function normalizarNFeEmitidas(rows: string[][], cnpjsGrupo: string[]): Resultad
     const ncm = r[NFE.NCM]?.trim() ?? ''
     if (!ncm || ncm === '0') continue            // produto sem NCM — ignora
 
+    const gtin        = gtinCol >= 0 ? (r[gtinCol]?.trim() ?? '') : ''
     const cnpjEmit    = normCnpj(r[NFE.CNPJ_EMIT] ?? '')
     const cnpjDest    = normCnpj(r[NFE.CNPJ_DEST] ?? '')
     const competencia = normPeriodo(r[NFE.ANO_MES] ?? '')
     const valor       = toNum(r[NFE.VL_PROD] ?? '0')
 
-    // Agrupamento por emitente + período + NCM (REQ-6)
+    // ── REQ-6: agrupamento por NCM ──────────────────────────────────────────
     const keyNcm = `${cnpjEmit}|${competencia}|${ncm}`
     if (!mapNcm[keyNcm]) {
       mapNcm[keyNcm] = { cnpj: cnpjEmit, competencia, ncm, valor_total_entradas: 0, valor_total_saidas: 0 }
     }
     mapNcm[keyNcm].valor_total_saidas += valor
 
-    // Se destinatário é varejista do grupo → registra para REQ-7
-    if (cnpjsGrupo.includes(cnpjDest)) {
-      const keyGrupo = `${cnpjEmit}|${cnpjDest}|${competencia}|${ncm}`
+    // ── GTIN: saídas totais por GTIN (todos os clientes) ── para CMV do REQ-7
+    if (gtinValido(gtin)) {
+      const keyGTIN = `${cnpjEmit}|${competencia}|${gtin}`
+      if (!mapGTIN[keyGTIN]) {
+        mapGTIN[keyGTIN] = { competencia, gtin, valor_entradas: 0, valor_saidas: 0 }
+      }
+      mapGTIN[keyGTIN].valor_saidas += valor
+    }
+
+    // ── REQ-7: saídas ao grupo econômico (por GTIN) ─────────────────────────
+    if (cnpjsGrupo.includes(cnpjDest) && gtinValido(gtin)) {
+      const keyGrupo = `${cnpjEmit}|${cnpjDest}|${competencia}|${gtin}`
       if (!mapGrupo[keyGrupo]) {
         mapGrupo[keyGrupo] = {
           cnpj_remetente:    cnpjEmit,
           cnpj_destinatario: cnpjDest,
           competencia,
-          ncm,
+          gtin,
           valor_saidas_tabela1: 0,
         }
       }
@@ -232,22 +257,42 @@ function normalizarNFeEmitidas(rows: string[][], cnpjsGrupo: string[]): Resultad
   return {
     movimentacaoNcm: Object.values(mapNcm),
     saidasGrupo:     Object.values(mapGrupo),
+    gtinSaidas:      Object.values(mapGTIN),
   }
 }
 
 /**
- * CSV 3 — EFD Entradas por NCM (somente para REQ-7 — cálculo do CMV).
- * Formato simples: cnpj, competencia, ncm, valor_total_entradas
- * Preenche valor_total_entradas; valor_total_saidas permanece 0.
+ * CSV 3 — NF-e de Entrada por Item (mesmo formato do CSV 2).
+ * Extrai entradas por GTIN para cálculo do CMV no REQ-7.
  */
-function normalizarEntradasNCM(rows: Record<string, string>[]): LinhaMovimentacaoNCM[] {
-  return rows.map(r => ({
-    cnpj:                 String(r.cnpj ?? '').trim(),
-    competencia:          String(r.competencia ?? '').trim(),
-    ncm:                  String(r.ncm ?? '').trim(),
-    valor_total_entradas: toNum(r.valor_total_entradas),
-    valor_total_saidas:   0,
-  }))
+function normalizarNFeEntradas(rows: string[][]): LinhaMovimentacaoGTIN[] {
+  const gtinCol = encontrarColunaGTIN(rows[0] ?? [])
+  if (gtinCol < 0) return []   // coluna GTIN não encontrada no cabeçalho
+
+  const mapGTIN: Record<string, LinhaMovimentacaoGTIN> = {}
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i]
+    if (!r || r.length < 29) continue
+
+    if (r[NFE.STATUS]?.trim()  !== 'AUTORIZADO') continue
+    if (r[NFE.TIPO_OP]?.trim() !== 'ENTRADA')    continue
+
+    const gtin = r[gtinCol]?.trim() ?? ''
+    if (!gtinValido(gtin)) continue
+
+    const cnpjDest    = normCnpj(r[NFE.CNPJ_DEST] ?? '')
+    const competencia = normPeriodo(r[NFE.ANO_MES] ?? '')
+    const valor       = toNum(r[NFE.VL_PROD] ?? '0')
+
+    const key = `${cnpjDest}|${competencia}|${gtin}`
+    if (!mapGTIN[key]) {
+      mapGTIN[key] = { competencia, gtin, valor_entradas: 0, valor_saidas: 0 }
+    }
+    mapGTIN[key].valor_entradas += valor
+  }
+
+  return Object.values(mapGTIN)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -379,24 +424,22 @@ export default function HomePage() {
 
       const rawFat = await parseCsv<Record<string, string>>(csv1!)
       const rawNfe = await parseCsvArray(csv2!)
-      const { movimentacaoNcm, saidasGrupo } = normalizarNFeEmitidas(rawNfe, cnpjsGrupoNorm)
+      const { movimentacaoNcm, saidasGrupo, gtinSaidas } = normalizarNFeEmitidas(rawNfe, cnpjsGrupoNorm)
 
-      let entradasNcm: LinhaMovimentacaoNCM[] = []
+      // Combina saídas GTIN (CSV2) com entradas GTIN (CSV3) para cálculo do CMV no REQ-7
+      const mapGTIN: Record<string, LinhaMovimentacaoGTIN> = {}
+      for (const g of gtinSaidas) {
+        mapGTIN[`${g.competencia}|${g.gtin}`] = { ...g }
+      }
       if (csv3) {
-        const rawEnt = await parseCsv<Record<string, string>>(csv3)
-        entradasNcm = normalizarEntradasNCM(rawEnt)
-      }
-
-      const mapMovimentacao: Record<string, LinhaMovimentacaoNCM> = {}
-      for (const m of movimentacaoNcm) {
-        mapMovimentacao[`${m.cnpj}|${m.competencia}|${m.ncm}`] = { ...m }
-      }
-      for (const e of entradasNcm) {
-        const key = `${e.cnpj}|${e.competencia}|${e.ncm}`
-        if (mapMovimentacao[key]) {
-          mapMovimentacao[key].valor_total_entradas += e.valor_total_entradas
-        } else {
-          mapMovimentacao[key] = { ...e }
+        const rawEnt = await parseCsvArray(csv3)
+        for (const e of normalizarNFeEntradas(rawEnt)) {
+          const key = `${e.competencia}|${e.gtin}`
+          if (mapGTIN[key]) {
+            mapGTIN[key].valor_entradas += e.valor_entradas
+          } else {
+            mapGTIN[key] = { ...e }
+          }
         }
       }
 
@@ -412,8 +455,9 @@ export default function HomePage() {
         grupoEconomico,
         cnpjsGrupo:        cnpjsGrupoNorm,
         faturamentoMensal: normalizarFaturamento(rawFat),
-        movimentacaoNcm:   Object.values(mapMovimentacao),
+        movimentacaoNcm,
         saidasGrupo,
+        movimentacaoGTIN:  Object.values(mapGTIN),
       }
 
       const res1 = await fetch('/api/analisar', {
@@ -655,8 +699,8 @@ export default function HomePage() {
             onFile={setCsv2}
           />
           <DropZone
-            label="CSV 3 — EFD Entradas por NCM (para cálculo de CMV)"
-            sublabel="Necessário apenas para calcular o REQ-7 — colunas: cnpj, competencia, ncm, valor_total_entradas"
+            label="CSV 3 — NF-e de Entrada por Item (para cálculo de CMV)"
+            sublabel="Mesmo formato do CSV 2 — necessário para calcular a agregação do REQ-7 (grupo econômico)"
             arquivo={csv3}
             onFile={setCsv3}
             obrigatorio={grupoEconomico}

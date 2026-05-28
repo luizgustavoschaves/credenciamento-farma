@@ -21,8 +21,15 @@ export interface LinhaSaidasGrupoEconomico {
   cnpj_remetente: string
   cnpj_destinatario: string
   competencia: string   // MM/AAAA
-  ncm: string
+  gtin: string          // GTIN/EAN do produto (substituiu ncm no REQ-7)
   valor_saidas_tabela1: number
+}
+
+export interface LinhaMovimentacaoGTIN {
+  competencia: string   // MM/AAAA
+  gtin: string
+  valor_entradas: number  // custo de compra (NF-e entrada)
+  valor_saidas: number    // receita de venda (NF-e emitidas, todos os clientes)
 }
 
 // ──────────────────────────────────────────
