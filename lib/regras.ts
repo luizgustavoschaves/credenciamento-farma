@@ -214,11 +214,13 @@ function verificarReq7(
   }
 
   // Calcular CMV estimado para as saídas destinadas ao grupo econômico
+  // Apenas GTINs com dados reais no CSV3 entram na conta — sem fallback
   let totalSaidasGrupo = 0
   let totalCmvEstimado = 0
 
   for (const l of linhasGrupo) {
-    const razaoCusto = custoRatioPorGTIN[l.gtin] ?? 0.8   // fallback: 80% de custo
+    const razaoCusto = custoRatioPorGTIN[l.gtin]
+    if (razaoCusto === undefined) continue  // GTIN sem dados no CSV3 → exclui da conta
     totalSaidasGrupo += l.valor_saidas_tabela1
     totalCmvEstimado += l.valor_saidas_tabela1 * razaoCusto
   }
