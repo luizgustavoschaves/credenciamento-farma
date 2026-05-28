@@ -9,6 +9,7 @@ import {
   LinhaSaidasGrupoEconomico,
   LinhaMovimentacaoGTIN,
 } from '@/lib/types'
+import { isTabela1 } from '@/lib/tabela1'
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers de parsing de CSV
@@ -177,6 +178,7 @@ const NFE = {
   TIPO_OP:    14,  // "SAÍDA" / "ENTRADA"
   NCM:        23,  // Código NCM do produto
   VL_PROD:    28,  // Valor do produto (formato BR: "1.234,56" ou "1234,56")
+  VL_DESC:    31,  // Valor do desconto (a deduzir do VL_PROD)
 } as const
 
 interface ResultadoNFe {
@@ -223,7 +225,9 @@ function normalizarNFeEmitidas(rows: string[][], cnpjsGrupo: string[]): Resultad
     const cnpjEmit    = normCnpj(r[NFE.CNPJ_EMIT] ?? '')
     const cnpjDest    = normCnpj(r[NFE.CNPJ_DEST] ?? '')
     const competencia = normPeriodo(r[NFE.ANO_MES] ?? '')
-    const valor       = toNum(r[NFE.VL_PROD] ?? '0')
+    const vProd       = toNum(r[NFE.VL_PROD] ?? '0')
+    const vDesc       = toNum(r[NFE.VL_DESC] ?? '0')
+    const valor       = vProd - vDesc   // valor líquido (VProd - VDesc)
 
     // ── REQ-6: agrupamento por NCM ──────────────────────────────────────────
     const keyNcm = `${cnpjEmit}|${competencia}|${ncm}`
@@ -241,9 +245,10 @@ function normalizarNFeEmitidas(rows: string[][], cnpjsGrupo: string[]): Resultad
       mapGTIN[keyGTIN].valor_saidas += valor
     }
 
-    // ── REQ-7: saídas ao grupo econômico (por GTIN) ─────────────────────────
-    // cnpjsGrupo contém raízes de 8 dígitos — basta verificar se o destinatário começa com o raiz
-    if (cnpjsGrupo.some(raiz => cnpjDest.startsWith(raiz)) && gtinValido(gtin)) {
+    // ── REQ-7: saídas ao grupo econômico ────────────────────────────────────
+    // Critérios: CNPJ raiz do grupo + NCM da Tabela I (Anexo) + GTIN válido
+    // Valor: líquido (VProd - VDesc), conforme análise fiscal
+    if (cnpjsGrupo.some(raiz => cnpjDest.startsWith(raiz)) && gtinValido(gtin) && isTabela1(ncm)) {
       const keyGrupo = `${cnpjEmit}|${cnpjDest}|${competencia}|${gtin}`
       if (!mapGrupo[keyGrupo]) {
         mapGrupo[keyGrupo] = {
