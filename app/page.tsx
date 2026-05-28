@@ -239,7 +239,8 @@ function normalizarNFeEmitidas(rows: string[][], cnpjsGrupo: string[]): Resultad
     }
 
     // ── REQ-7: saídas ao grupo econômico (por GTIN) ─────────────────────────
-    if (cnpjsGrupo.includes(cnpjDest) && gtinValido(gtin)) {
+    // cnpjsGrupo contém raízes de 8 dígitos — basta verificar se o destinatário começa com o raiz
+    if (cnpjsGrupo.some(raiz => cnpjDest.startsWith(raiz)) && gtinValido(gtin)) {
       const keyGrupo = `${cnpjEmit}|${cnpjDest}|${competencia}|${gtin}`
       if (!mapGrupo[keyGrupo]) {
         mapGrupo[keyGrupo] = {
@@ -398,25 +399,33 @@ export default function HomePage() {
       .replace(/(\d{4})(\d)/, '$1-$2')
   }
 
+  // Formata CNPJ raiz (8 dígitos) como XX.XXX.XXX
+  const formatarRaiz = (v: string) => {
+    const n = v.replace(/\D/g, '').slice(0, 8)
+    return n
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+  }
+
   const [textareaGrupo, setTextareaGrupo] = useState('')
   const [modoTexto, setModoTexto] = useState(false)
 
   const adicionarCnpjGrupo = () => setCnpjsGrupo(prev => [...prev, ''])
   const removerCnpjGrupo   = (i: number) => setCnpjsGrupo(prev => prev.filter((_, idx) => idx !== i))
   const atualizarCnpjGrupo = (i: number, val: string) =>
-    setCnpjsGrupo(prev => prev.map((c, idx) => idx === i ? formatarCnpj(val) : c))
+    setCnpjsGrupo(prev => prev.map((c, idx) => idx === i ? formatarRaiz(val) : c))
 
-  function parsearCnpjsBulk(texto: string): string[] {
+  function parsearRaizesBulk(texto: string): string[] {
     return texto
-      .split(/[\n\r,;|\s]+/)
-      .map(s => s.replace(/\D/g, ''))
-      .filter(s => s.length === 14)
+      .split(/[\n\r,;|]+/)
+      .map(s => s.replace(/\D/g, '').slice(0, 8))
+      .filter(s => s.length === 8)
       .filter((s, i, arr) => arr.indexOf(s) === i) // deduplica
-      .map(formatarCnpj)
+      .map(formatarRaiz)
   }
 
   function aplicarCnpjsBulk() {
-    const lista = parsearCnpjsBulk(textareaGrupo)
+    const lista = parsearRaizesBulk(textareaGrupo)
     if (lista.length > 0) {
       setCnpjsGrupo(lista)
       setModoTexto(false)
@@ -436,8 +445,9 @@ export default function HomePage() {
     setLoading(true)
 
     try {
+      // Raízes de CNPJ (8 dígitos) — o filtro no CSV2/CSV3 usa startsWith
       const cnpjsGrupoNorm = grupoEconomico
-        ? cnpjsGrupo.map(c => c.replace(/\D/g, '')).filter(c => c.length === 14)
+        ? cnpjsGrupo.map(c => c.replace(/\D/g, '')).filter(c => c.length === 8)
         : []
 
       setLoadingMsg('Analisando planilhas...')
@@ -664,7 +674,7 @@ export default function HomePage() {
               <div className="mt-4 ml-7 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium text-gray-600">
-                    CNPJs dos estabelecimentos varejistas do mesmo grupo:
+                    CNPJs raiz das empresas do grupo (somente os 8 primeiros dígitos):
                   </p>
                   <button
                     type="button"
@@ -678,7 +688,7 @@ export default function HomePage() {
                     }}
                     className="text-xs text-sefaz-blue hover:underline"
                   >
-                    {modoTexto ? '✔ Aplicar lista' : '📋 Colar lista de CNPJs'}
+                    {modoTexto ? '✔ Aplicar lista' : '📋 Colar lista'}
                   </button>
                 </div>
 
@@ -687,13 +697,13 @@ export default function HomePage() {
                     <textarea
                       value={textareaGrupo}
                       onChange={e => setTextareaGrupo(e.target.value)}
-                      rows={8}
-                      placeholder={`Cole aqui os CNPJs, um por linha ou separados por vírgula:\n\n06.626.253/0001-74\n06.626.253/0002-55\n04.899.316/0001-40\n...`}
+                      rows={5}
+                      placeholder={`Cole os CNPJs raiz, um por linha:\n\n06.626.253\n04.899.316`}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-sefaz-blue resize-y"
                     />
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-gray-400">
-                        {parsearCnpjsBulk(textareaGrupo).length} CNPJ(s) reconhecido(s)
+                        {parsearRaizesBulk(textareaGrupo).length} raiz(es) reconhecida(s)
                       </p>
                       <button
                         type="button"
@@ -712,7 +722,7 @@ export default function HomePage() {
                           type="text"
                           value={c}
                           onChange={e => atualizarCnpjGrupo(i, e.target.value)}
-                          placeholder="00.000.000/0001-00"
+                          placeholder="00.000.000"
                           className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sefaz-blue"
                         />
                         {cnpjsGrupo.length > 1 && (
@@ -731,11 +741,11 @@ export default function HomePage() {
                       onClick={adicionarCnpjGrupo}
                       className="text-xs text-sefaz-blue hover:underline mt-1"
                     >
-                      + Adicionar outro CNPJ
+                      + Adicionar outro raiz
                     </button>
-                    {cnpjsGrupo.filter(c => c.replace(/\D/g, '').length === 14).length > 0 && (
+                    {cnpjsGrupo.filter(c => c.replace(/\D/g, '').length === 8).length > 0 && (
                       <p className="text-xs text-gray-400">
-                        {cnpjsGrupo.filter(c => c.replace(/\D/g, '').length === 14).length} CNPJ(s) preenchido(s)
+                        {cnpjsGrupo.filter(c => c.replace(/\D/g, '').length === 8).length} raiz(es) preenchida(s) — todas as filiais serão identificadas automaticamente no CSV
                       </p>
                     )}
                   </>
