@@ -44,7 +44,8 @@ function parseCsvArray(file: File): Promise<string[][]> {
 
 function toNum(v: unknown): number {
   if (typeof v === 'number') return v
-  const s = String(v).trim()
+  // Remove prefixos de moeda ("R$", "$", "€") e espaços
+  const s = String(v).trim().replace(/^[R$€£\s]+/, '').trim()
   // Formato brasileiro (vírgula = decimal): "805779,49" ou "1.234.567,89"
   // Prioridade: se contém vírgula, trata como BR — parseFloat para na vírgula e daria errado
   if (s.includes(',')) {
@@ -118,6 +119,8 @@ function normalizarFaturamento(rows: Record<string, string>[]): LinhaFaturamento
     for (const r of rows) {
       const cnpj        = normCnpj(getCol(r, 'CNPJ'))
       const competencia = normPeriodo(getCol(r, 'PERIODO'))
+      // Descarta linhas com período inválido (ex: artefatos JSF do portal da SEFAZ)
+      if (!/^\d{2}\/\d{4}$/.test(competencia)) continue
       const indOper     = somenteDigitos(getCol(r, 'INDOPER'))  // '0' ou '1'
       const subNivel    = Math.round(toNum(getCol(r, 'SUBSTITUTIVA')))  // 1=original, 2=substituta, etc.
       const valorRaw    = getCol(r, 'VLOPR') || getCol(r, 'VLDOC')
