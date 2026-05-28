@@ -398,10 +398,30 @@ export default function HomePage() {
       .replace(/(\d{4})(\d)/, '$1-$2')
   }
 
+  const [textareaGrupo, setTextareaGrupo] = useState('')
+  const [modoTexto, setModoTexto] = useState(false)
+
   const adicionarCnpjGrupo = () => setCnpjsGrupo(prev => [...prev, ''])
   const removerCnpjGrupo   = (i: number) => setCnpjsGrupo(prev => prev.filter((_, idx) => idx !== i))
   const atualizarCnpjGrupo = (i: number, val: string) =>
     setCnpjsGrupo(prev => prev.map((c, idx) => idx === i ? formatarCnpj(val) : c))
+
+  function parsearCnpjsBulk(texto: string): string[] {
+    return texto
+      .split(/[\n\r,;|\s]+/)
+      .map(s => s.replace(/\D/g, ''))
+      .filter(s => s.length === 14)
+      .filter((s, i, arr) => arr.indexOf(s) === i) // deduplica
+      .map(formatarCnpj)
+  }
+
+  function aplicarCnpjsBulk() {
+    const lista = parsearCnpjsBulk(textareaGrupo)
+    if (lista.length > 0) {
+      setCnpjsGrupo(lista)
+      setModoTexto(false)
+    }
+  }
 
   const podeEnviar =
     cnpj.replace(/\D/g, '').length === 14 &&
@@ -628,7 +648,7 @@ export default function HomePage() {
                 checked={grupoEconomico}
                 onChange={e => {
                   setGrupo(e.target.checked)
-                  if (!e.target.checked) { setCsv3(null); setCnpjsGrupo(['']) }
+                  if (!e.target.checked) { setCsv3(null); setCnpjsGrupo(['']); setModoTexto(false); setTextareaGrupo('') }
                 }}
                 className="w-4 h-4 accent-sefaz-blue"
               />
@@ -642,36 +662,84 @@ export default function HomePage() {
 
             {grupoEconomico && (
               <div className="mt-4 ml-7 space-y-2">
-                <p className="text-xs font-medium text-gray-600">
-                  CNPJs dos estabelecimentos varejistas do mesmo grupo:
-                </p>
-                {cnpjsGrupo.map((c, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={c}
-                      onChange={e => atualizarCnpjGrupo(i, e.target.value)}
-                      placeholder="00.000.000/0001-00"
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sefaz-blue"
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-gray-600">
+                    CNPJs dos estabelecimentos varejistas do mesmo grupo:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (modoTexto) {
+                        aplicarCnpjsBulk()
+                      } else {
+                        setTextareaGrupo(cnpjsGrupo.filter(c => c).join('\n'))
+                        setModoTexto(true)
+                      }
+                    }}
+                    className="text-xs text-sefaz-blue hover:underline"
+                  >
+                    {modoTexto ? '✔ Aplicar lista' : '📋 Colar lista de CNPJs'}
+                  </button>
+                </div>
+
+                {modoTexto ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={textareaGrupo}
+                      onChange={e => setTextareaGrupo(e.target.value)}
+                      rows={8}
+                      placeholder={`Cole aqui os CNPJs, um por linha ou separados por vírgula:\n\n06.626.253/0001-74\n06.626.253/0002-55\n04.899.316/0001-40\n...`}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-sefaz-blue resize-y"
                     />
-                    {cnpjsGrupo.length > 1 && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-400">
+                        {parsearCnpjsBulk(textareaGrupo).length} CNPJ(s) reconhecido(s)
+                      </p>
                       <button
                         type="button"
-                        onClick={() => removerCnpjGrupo(i)}
-                        className="text-red-400 hover:text-red-600 text-lg leading-none"
+                        onClick={() => setModoTexto(false)}
+                        className="text-xs text-gray-400 hover:text-gray-600"
                       >
-                        ×
+                        Cancelar
                       </button>
-                    )}
+                    </div>
                   </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={adicionarCnpjGrupo}
-                  className="text-xs text-sefaz-blue hover:underline mt-1"
-                >
-                  + Adicionar outro CNPJ
-                </button>
+                ) : (
+                  <>
+                    {cnpjsGrupo.map((c, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={c}
+                          onChange={e => atualizarCnpjGrupo(i, e.target.value)}
+                          placeholder="00.000.000/0001-00"
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sefaz-blue"
+                        />
+                        {cnpjsGrupo.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removerCnpjGrupo(i)}
+                            className="text-red-400 hover:text-red-600 text-lg leading-none"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={adicionarCnpjGrupo}
+                      className="text-xs text-sefaz-blue hover:underline mt-1"
+                    >
+                      + Adicionar outro CNPJ
+                    </button>
+                    {cnpjsGrupo.filter(c => c.replace(/\D/g, '').length === 14).length > 0 && (
+                      <p className="text-xs text-gray-400">
+                        {cnpjsGrupo.filter(c => c.replace(/\D/g, '').length === 14).length} CNPJ(s) preenchido(s)
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>
