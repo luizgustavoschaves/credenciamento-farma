@@ -363,10 +363,23 @@ function parecerToElements(
 
     } else if (RE_REQ.test(t)) {
       // "Faturamento mínimo (Art. 3º, IV): ATENDIDO" — sub-cabeçalho em negrito
-      elements.push(new Paragraph({
-        spacing: { before: 120, after: 60 },
-        children: [run(t, { bold: true, size: PT11 })],
-      }))
+      // "NÃO ATENDIDO" renderizado em vermelho
+      const match = t.match(/^(.+:\s*)(ATENDIDO|NÃO ATENDIDO|NÃO APLICÁVEL|INFORMATIVO)$/)
+      if (match) {
+        const corStatus = match[2] === 'NÃO ATENDIDO' ? 'CC0000' : undefined
+        elements.push(new Paragraph({
+          spacing: { before: 120, after: 60 },
+          children: [
+            run(match[1], { bold: true, size: PT11 }),
+            run(match[2], { bold: true, size: PT11, color: corStatus }),
+          ],
+        }))
+      } else {
+        elements.push(new Paragraph({
+          spacing: { before: 120, after: 60 },
+          children: [run(t, { bold: true, size: PT11 })],
+        }))
+      }
 
     } else if (t.startsWith('⚠️')) {
       // Avisos offline — ignorados (já removidos do parecer)
@@ -432,6 +445,13 @@ export async function GET(req: NextRequest) {
   const textoParecer = parecer?.texto_final || parecer?.texto_gerado || ''
   const resultado    = pedido.resultado_json as ResultadoAnalise | null
   const checklist    = docAnalise?.resultado_json as Record<string, { checked: boolean }> | null
+
+  // Se nem todos os documentos manuais foram marcados, atualizar status da documentação no texto
+  const chavesManual = ITENS_CHECKLIST.filter(i => i.chaveManual).map(i => i.chaveManual as string)
+  const docsCompletos = checklist !== null && chavesManual.every(c => checklist[c]?.checked === true)
+  const textoFinal = docsCompletos
+    ? textoParecer
+    : textoParecer.replace(/(Documentação exigida[^:]*:\s*)ATENDIDO/, '$1NÃO ATENDIDO')
 
   // ── Logo ──────────────────────────────────────────────────────────────────
   let logoBuffer: Buffer | null = null
@@ -538,7 +558,7 @@ export async function GET(req: NextRequest) {
   // Parecer (com Tabela 1 e 2 embutidas nos marcadores)
   const t1 = resultado ? buildTable1(resultado) : null
   const t2 = resultado ? buildTable2(resultado) : null
-  children.push(...parecerToElements(textoParecer, t1, t2))
+  children.push(...parecerToElements(textoFinal, t1, t2))
 
   // Tabela 3 (checklist) — início em nova página
   if (resultado) {
