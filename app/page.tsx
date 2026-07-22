@@ -654,7 +654,7 @@ export default function HomePage() {
                   Período analisado: {(() => {
                     const [y, m] = dataPedido.split('-').map(Number)
                     const fim = new Date(y, m - 2)  // mês anterior
-                    const ini = new Date(y, m - 14) // 12 meses antes do fim
+                    const ini = new Date(y, m - 13) // 12 meses antes do fim
                     return `${String(ini.getMonth()+1).padStart(2,'0')}/${ini.getFullYear()} a ${String(fim.getMonth()+1).padStart(2,'0')}/${fim.getFullYear()}`
                   })()}
                 </p>
