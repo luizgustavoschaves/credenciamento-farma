@@ -246,13 +246,18 @@ function verificarReq7(
 // Calculado com base no faturamento médio mensal apurado no REQ-5
 // ──────────────────────────────────────────────────────────────────────────────
 
-function calcularReq8(mediaFaturamentoMensal: number) {
+function calcularReq8(mediaFaturamentoMensal: number, empregadosComprovados?: number) {
   const empregadosMinimos = calcularEmpregadosMinimos(mediaFaturamentoMensal)
   const detalhe: DetalheReq8 = {
     faixa_faturamento: descricaoFaixa(mediaFaturamentoMensal),
     empregados_minimos_exigidos: empregadosMinimos,
+    empregados_comprovados: empregadosComprovados,
   }
-  return { resultado: 'informativo' as const, detalhe }
+  // Se o auditor informou a quantidade comprovada, compara; caso contrário, fica informativo
+  const resultado = empregadosComprovados !== undefined
+    ? (empregadosComprovados >= empregadosMinimos ? 'aprovado' : 'reprovado')
+    : 'informativo'
+  return { resultado: resultado as 'aprovado' | 'reprovado' | 'informativo', detalhe }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -268,8 +273,9 @@ export function executarAnalise(params: {
   saidasGrupo: LinhaSaidasGrupoEconomico[]
   movimentacaoGTIN: LinhaMovimentacaoGTIN[]
   inicioAtividadeManual?: boolean
+  empregadosComprovados?: number
 }): ResultadoAnalise {
-  const { cnpj, tipo, dataPedido, faturamentoMensal, movimentacaoNcm, saidasGrupo, movimentacaoGTIN, inicioAtividadeManual } = params
+  const { cnpj, tipo, dataPedido, faturamentoMensal, movimentacaoNcm, saidasGrupo, movimentacaoGTIN, inicioAtividadeManual, empregadosComprovados } = params
 
   // Filtra apenas os 12 meses anteriores à data do pedido
   const periodo    = competencias12Meses(dataPedido)
@@ -284,7 +290,7 @@ export function executarAnalise(params: {
   const req5 = verificarReq5(fat12m, inicioAtividadeManual)
   const req6 = verificarReq6(ncm12m)
   const req7 = verificarReq7(grp12m, gtin12m)
-  const req8 = calcularReq8(req5.detalhe.media_mensal)
+  const req8 = calcularReq8(req5.detalhe.media_mensal, empregadosComprovados)
 
   // Dados mensais ordenados cronologicamente (para tabelas do PDF)
   const dadosMensais: DadosMensais[] = [...fat12m]

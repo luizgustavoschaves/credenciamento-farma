@@ -70,6 +70,7 @@ export interface DetalheReq7 {
 export interface DetalheReq8 {
   faixa_faturamento: string
   empregados_minimos_exigidos: number
+  empregados_comprovados?: number   // preenchido manualmente pelo auditor
 }
 
 export interface DadosMensais {
@@ -88,7 +89,7 @@ export interface ResultadoAnalise {
   req5: { resultado: ResultadoRequisito; detalhe: DetalheReq5 }
   req6: { resultado: ResultadoRequisito; detalhe: DetalheReq6 }
   req7: { resultado: ResultadoRequisito; detalhe: DetalheReq7 | null }
-  req8: { resultado: 'informativo'; detalhe: DetalheReq8 }
+  req8: { resultado: 'aprovado' | 'reprovado' | 'informativo'; detalhe: DetalheReq8 }
 
   conclusao: 'deferido' | 'indeferido'
   motivos_indeferimento: string[]

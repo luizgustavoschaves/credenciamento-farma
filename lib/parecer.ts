@@ -59,7 +59,10 @@ export function gerarQuadroResumo(resultado: ResultadoAnalise): string {
   const r7min   = req7.resultado === 'nao_aplicavel' ? '—' : '30,00%'
 
   // REQ-8
-  const r8valor = `${req8.detalhe.faixa_faturamento}`
+  const r8comp  = req8.detalhe.empregados_comprovados
+  const r8valor = r8comp !== undefined
+    ? `Comprovados: ${r8comp} func. CLT`
+    : req8.detalhe.faixa_faturamento
   const r8min   = `${req8.detalhe.empregados_minimos_exigidos} func. CLT`
 
   const linhas = [
@@ -76,7 +79,7 @@ export function gerarQuadroResumo(resultado: ResultadoAnalise): string {
     sep,
     row(['REQ-7', 'Art. 3º, VII', r7valor, r7min, resultadoLabel(req7.resultado)]),
     sep,
-    row(['REQ-8', 'Art. 4º',      r8valor, r8min, 'INFORMATIVO']),
+    row(['REQ-8', 'Art. 4º',      r8valor, r8min, resultadoLabel(req8.resultado)]),
     bot,
     '',
   ]
@@ -276,11 +279,27 @@ export function gerarParecerFallback(resultado: ResultadoAnalise): string {
   linhas.push('')
 
   // REQ-8 (sem nomenclatura, obrigatório)
-  linhas.push(`Quadro mínimo de empregados (Art. 4º): ATENDIDO`)
-  linhas.push(
-    `Com base na faixa de faturamento apurada (${req8.detalhe.faixa_faturamento}), a legislação exige o quadro mínimo de ` +
-    `${req8.detalhe.empregados_minimos_exigidos} funcionário(s) com vínculo empregatício (CLT), requisito que foi cumprido pelo contribuinte.`
-  )
+  const r8comp = req8.detalhe.empregados_comprovados
+  const r8label = req8.resultado === 'aprovado' ? 'ATENDIDO'
+    : req8.resultado === 'reprovado' ? 'NÃO ATENDIDO'
+    : 'INFORMATIVO'
+  linhas.push(`Quadro mínimo de empregados (Art. 4º): ${r8label}`)
+  if (r8comp !== undefined) {
+    linhas.push(
+      `Com base na faixa de faturamento apurada (${req8.detalhe.faixa_faturamento}), a legislação exige o quadro mínimo de ` +
+      `${req8.detalhe.empregados_minimos_exigidos} funcionário(s) com vínculo empregatício (CLT). ` +
+      `O contribuinte comprovou o quadro de ${r8comp} funcionário(s), ` +
+      (req8.resultado === 'aprovado'
+        ? `atendendo ao requisito.'`
+        : `não atendendo ao mínimo exigido.`)
+    )
+  } else {
+    linhas.push(
+      `Com base na faixa de faturamento apurada (${req8.detalhe.faixa_faturamento}), a legislação exige o quadro mínimo de ` +
+      `${req8.detalhe.empregados_minimos_exigidos} funcionário(s) com vínculo empregatício (CLT). ` +
+      `A quantidade de funcionários comprovados não foi informada — requisito registrado como informativo.`
+    )
+  }
   linhas.push('')
 
   // ── IV — DO DISPOSITIVO ───────────────────────────────────────────────────

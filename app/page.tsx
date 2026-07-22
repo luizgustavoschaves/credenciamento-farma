@@ -388,6 +388,7 @@ export default function HomePage() {
   const [numeroIF, setNumeroIF]            = useState('')   // ex: 49/2026
   const [numeroProcesso, setNumeroProcesso]= useState('')   // ex: 001234/2026
   const [inicioAtividade, setInicioAtividade] = useState(false)
+  const [empregadosComprovados, setEmpregadosComprovados] = useState<string>('')
   const [grupoEconomico, setGrupo]            = useState(false)
   const [cnpjsGrupo, setCnpjsGrupo]          = useState<string[]>([''])
 
@@ -491,6 +492,7 @@ export default function HomePage() {
         tipo,
         dataPedido,
         inicioAtividade,
+        empregadosComprovados: empregadosComprovados !== '' ? Number(empregadosComprovados) : undefined,
         grupoEconomico,
         cnpjsGrupo:        cnpjsGrupoNorm,
         faturamentoMensal: normalizarFaturamento(rawFat),
@@ -507,7 +509,9 @@ export default function HomePage() {
 
       if (!res1.ok) {
         const data = await res1.json()
-        throw new Error(data.erro ?? 'Erro na análise numérica')
+        const detalhe = data.detalhe ? ` — ${data.detalhe}` : ''
+        const codigo  = data.codigo  ? ` (${data.codigo})`  : ''
+        throw new Error((data.erro ?? 'Erro na análise numérica') + detalhe + codigo)
       }
 
       const { pedidoId } = await res1.json()
@@ -594,6 +598,23 @@ export default function HomePage() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sefaz-blue"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Funcionários comprovados (REQ-8)
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={empregadosComprovados}
+              onChange={e => setEmpregadosComprovados(e.target.value)}
+              placeholder="Qtd. de funcionários CLT comprovados"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sefaz-blue"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Informe a quantidade de empregados CLT que o contribuinte comprovou (GFIP, eSocial etc.). Deixe em branco para manter como informativo.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

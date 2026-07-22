@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       numeroIF,
       numeroProcesso,
       inicioAtividade,
+      empregadosComprovados,
       faturamentoMensal,
       movimentacaoNcm,
       saidasGrupo,
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
       numeroIF?: string
       numeroProcesso?: string
       inicioAtividade?: boolean
+      empregadosComprovados?: number
       faturamentoMensal: LinhaFaturamentoMensal[]
       movimentacaoNcm: LinhaMovimentacaoNCM[]
       saidasGrupo: LinhaSaidasGrupoEconomico[]
@@ -57,7 +59,8 @@ export async function POST(req: NextRequest) {
       movimentacaoNcm,
       saidasGrupo:      saidasGrupo      ?? [],
       movimentacaoGTIN: movimentacaoGTIN ?? [],
-      inicioAtividadeManual: inicioAtividade ?? false,
+      inicioAtividadeManual:  inicioAtividade       ?? false,
+      empregadosComprovados:  empregadosComprovados ?? undefined,
     })
 
     // 2. Gerar parecer offline (sem custo de API)
@@ -69,10 +72,11 @@ export async function POST(req: NextRequest) {
       .from('pedidos')
       .insert({
         cnpj,
-        razao_social:      razaoSocial      ?? null,
-        inscricao_estadual: inscricaoEstadual ?? null,
-        numero_if:         numeroIF          ?? null,
-        numero_processo:   numeroProcesso    ?? null,
+        razao_social:       razaoSocial       ?? null,
+        inscricao_estadual: inscricaoEstadual  ?? null,
+        numero_if:          numeroIF           ?? null,
+        numero_processo:    numeroProcesso     ?? null,
+        data_pedido:        dataPedido         ?? null,
         tipo,
         status: 'pendente',
         resultado_json: resultado,
