@@ -96,7 +96,7 @@ type ChaveDoc =
 
 type ChecklistManual = Record<ChaveDoc, { checked: boolean }>
 
-const DOCS_CONFIG: { chave: ChaveDoc; id: string; titulo: string; criterio: string; dica: string }[] = [
+const DOCS_CONFIG: { chave: ChaveDoc; id: string; titulo: string; criterio: string; dica: string; link?: string }[] = [
   {
     chave: 'cnae',
     id: 'DOC-1',
@@ -166,6 +166,7 @@ const DOCS_CONFIG: { chave: ChaveDoc; id: string; titulo: string; criterio: stri
     titulo: 'Contrato do Contador + DHP',
     criterio: 'Contrato vigente no mês do pedido; DHP do contador em dia',
     dica: 'Contrato de prestação de serviços contábeis firmado com a empresa atacadista, acompanhado da Declaração de Habilitação Profissional (DHP) do contabilista. Verificar se o contrato está vigente na data do pedido de credenciamento. Art. 2º, inciso II, alínea h da Portaria 410/2025.',
+    link: 'https://servicos.crcma.org.br:444/spwMA/consultacadastral/Externa.aspx',
   },
   {
     chave: 'licenca_anvisa',
@@ -173,6 +174,7 @@ const DOCS_CONFIG: { chave: ChaveDoc; id: string; titulo: string; criterio: stri
     titulo: 'Licença da ANVISA',
     criterio: 'Autorização de funcionamento vigente (vencimento posterior ao pedido)',
     dica: 'Autorização de Funcionamento emitida pela Agência Nacional de Vigilância Sanitária (ANVISA). Verificar se a licença está vigente na data do pedido. Art. 2º, inciso II, alínea i da Portaria 410/2025.',
+    link: 'https://consultas.anvisa.gov.br/#/empresas/empresas/',
   },
   {
     chave: 'regularidade_fiscal',
@@ -236,7 +238,7 @@ function ChecklistDocumental({
         {totalMarcados}/{DOCS_CONFIG.length} documentos verificados
       </p>
 
-      {DOCS_CONFIG.map(({ chave, id, titulo, dica }) => {
+      {DOCS_CONFIG.map(({ chave, id, titulo, dica, link }) => {
         const checked = itens[chave].checked
         return (
           <label
@@ -267,6 +269,18 @@ function ChecklistDocumental({
                     {dica}
                   </span>
                 </span>
+                {/* Link externo de consulta */}
+                {link && (
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    className="inline-flex items-center gap-0.5 text-xs text-blue-600 hover:text-blue-800 hover:underline flex-shrink-0"
+                  >
+                    ↗ Consultar
+                  </a>
+                )}
               </div>
             </div>
             {checked && <span className="text-green-500 text-base flex-shrink-0">✓</span>}
