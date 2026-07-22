@@ -207,11 +207,41 @@ export function gerarParecerFallback(resultado: ResultadoAnalise): string {
   )
   linhas.push('')
 
-  // Documentação
-  linhas.push(`Documentação exigida (Art. 2º): ATENDIDO`)
-  linhas.push(
-    `Toda a documentação exigida pela Portaria GABIN nº 410/2025 foi apresentada pelo contribuinte e devidamente conferida por este auditor fiscal, encontrando-se em conformidade com os requisitos normativos aplicáveis.`
-  )
+  // Documentação — reflete o checklist preenchido no formulário
+  const NOMES_DOC_CURTO: Record<string, string> = {
+    cnae:                'CNAE enquadrado',
+    requerimento:        'Requerimento do pedido',
+    contrato_social:     'Contrato Social',
+    docs_socios:         'Documentos dos sócios',
+    imovel:              'Registro de imóvel/locação',
+    comprovante_endereco:'Comprovante de endereço',
+    ir_socios:           'IR dos sócios',
+    rais:                'RAIS',
+    gfip:                'GFIP',
+    contrato_contador:   'Contrato do contador + DHP',
+    licenca_anvisa:      'Licença ANVISA',
+    regularidade_fiscal: 'Regularidade fiscal',
+    regularidade_dief:   'DIEF/GIA-ST',
+    grupo_economico:     'Declaração de grupo econômico',
+  }
+  const checklistManual = resultado.checklist_manual
+  const docsFaltando = checklistManual
+    ? (Object.entries(checklistManual) as [string, boolean][])
+        .filter(([, ok]) => !ok)
+        .map(([k]) => NOMES_DOC_CURTO[k] ?? k)
+    : []
+  const statusDocs = docsFaltando.length === 0 ? 'ATENDIDO' : 'NÃO ATENDIDO'
+
+  linhas.push(`Documentação exigida (Art. 2º): ${statusDocs}`)
+  if (docsFaltando.length === 0) {
+    linhas.push(
+      `Toda a documentação exigida pela Portaria GABIN nº 410/2025 foi apresentada pelo contribuinte e devidamente conferida por este auditor fiscal, encontrando-se em conformidade com os requisitos normativos aplicáveis.`
+    )
+  } else {
+    linhas.push(
+      `A análise documental identificou ${docsFaltando.length} item(ns) exigido(s) pela Portaria GABIN nº 410/2025 que não foi(foram) apresentado(s) ou encontra(m)-se em desacordo: ${docsFaltando.join('; ')}.`
+    )
+  }
   linhas.push('')
 
   // REQ-5 (antes do REQ-4, conforme solicitado)

@@ -8,8 +8,17 @@ import {
   LinhaMovimentacaoNCM,
   LinhaSaidasGrupoEconomico,
   LinhaMovimentacaoGTIN,
+  ChaveChecklist,
 } from '@/lib/types'
 import { isTabela1 } from '@/lib/tabela1'
+import { ITENS_CHECKLIST } from '@/lib/checklist-items'
+
+const CHECKLIST_INICIAL: Record<ChaveChecklist, boolean> = {
+  cnae: false, requerimento: false, contrato_social: false, docs_socios: false,
+  imovel: false, comprovante_endereco: false, ir_socios: false, rais: false,
+  gfip: false, contrato_contador: false, licenca_anvisa: false,
+  regularidade_fiscal: false, regularidade_dief: false, grupo_economico: false,
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers de parsing de CSV
@@ -389,6 +398,7 @@ export default function HomePage() {
   const [numeroProcesso, setNumeroProcesso]= useState('')   // ex: 001234/2026
   const [inicioAtividade, setInicioAtividade] = useState(false)
   const [empregadosComprovados, setEmpregadosComprovados] = useState<string>('')
+  const [checklistManual, setChecklistManual] = useState<Record<ChaveChecklist, boolean>>({ ...CHECKLIST_INICIAL })
   const [grupoEconomico, setGrupo]            = useState(false)
   const [cnpjsGrupo, setCnpjsGrupo]          = useState<string[]>([''])
 
@@ -493,6 +503,7 @@ export default function HomePage() {
         dataPedido,
         inicioAtividade,
         empregadosComprovados: empregadosComprovados !== '' ? Number(empregadosComprovados) : undefined,
+        checklistManual,
         grupoEconomico,
         cnpjsGrupo:        cnpjsGrupoNorm,
         faturamentoMensal: normalizarFaturamento(rawFat),
@@ -782,6 +793,63 @@ export default function HomePage() {
                 )}
               </div>
             )}
+          </div>
+        </section>
+
+        {/* Checklist Documental */}
+        <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="mb-4">
+            <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide">
+              Checklist Documental
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Marque os documentos apresentados pelo contribuinte. Itens não marcados serão considerados no resultado da análise.
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            {ITENS_CHECKLIST.filter(i => i.chaveManual).map(item => {
+              const chave = item.chaveManual as ChaveChecklist
+              const marcado = checklistManual[chave]
+              return (
+                <label
+                  key={chave}
+                  className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-all
+                    ${marcado
+                      ? 'border-green-200 bg-green-50'
+                      : 'border-gray-100 bg-gray-50 hover:border-gray-200'}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={marcado}
+                    onChange={e => setChecklistManual(prev => ({ ...prev, [chave]: e.target.checked }))}
+                    className="h-4 w-4 rounded accent-green-600 flex-shrink-0"
+                  />
+                  <span className="text-xs font-semibold text-gray-400 flex-shrink-0">{item.base}</span>
+                  <span className={`text-sm ${marcado ? 'text-green-700' : 'text-gray-700'}`}>
+                    {item.descricao}
+                  </span>
+                  {marcado && <span className="ml-auto text-green-500 text-sm flex-shrink-0">✓</span>}
+                </label>
+              )
+            })}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+            <span>
+              {Object.values(checklistManual).filter(Boolean).length}/{ITENS_CHECKLIST.filter(i => i.chaveManual).length} itens marcados
+            </span>
+            <button
+              type="button"
+              onClick={() => setChecklistManual(
+                Object.fromEntries(
+                  Object.keys(CHECKLIST_INICIAL).map(k => [k, true])
+                ) as Record<ChaveChecklist, boolean>
+              )}
+              className="text-sefaz-blue hover:underline"
+            >
+              Marcar todos
+            </button>
           </div>
         </section>
 

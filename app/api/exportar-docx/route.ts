@@ -444,9 +444,17 @@ export async function GET(req: NextRequest) {
 
   const textoParecer = parecer?.texto_final || parecer?.texto_gerado || ''
   const resultado    = pedido.resultado_json as ResultadoAnalise | null
-  const checklist    = docAnalise?.resultado_json as Record<string, { checked: boolean }> | null
 
-  // Se nem todos os documentos manuais foram marcados, atualizar status da documentação no texto
+  // Checklist: prefere documentos_analise (atualização posterior), cai para checklist_manual do resultado
+  const checklistBruto = (docAnalise?.resultado_json as Record<string, { checked: boolean }> | null)
+    ?? (resultado?.checklist_manual
+      ? Object.fromEntries(
+          Object.entries(resultado.checklist_manual).map(([k, v]) => [k, { checked: v as boolean }])
+        ) as Record<string, { checked: boolean }>
+      : null)
+  const checklist = checklistBruto
+
+  // Segurança: se o texto do parecer ainda diz ATENDIDO mas checklist mostra pendências, corrige
   const chavesManual = ITENS_CHECKLIST.filter(i => i.chaveManual).map(i => i.chaveManual as string)
   const docsCompletos = checklist !== null && chavesManual.every(c => checklist[c]?.checked === true)
   const textoFinal = docsCompletos

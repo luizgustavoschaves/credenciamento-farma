@@ -7,6 +7,7 @@ import {
   LinhaMovimentacaoNCM,
   LinhaSaidasGrupoEconomico,
   LinhaMovimentacaoGTIN,
+  ChecklistManualBool,
 } from '@/lib/types'
 
 export async function POST(req: NextRequest) {
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
       numeroProcesso,
       inicioAtividade,
       empregadosComprovados,
+      checklistManual,
       faturamentoMensal,
       movimentacaoNcm,
       saidasGrupo,
@@ -37,6 +39,7 @@ export async function POST(req: NextRequest) {
       numeroProcesso?: string
       inicioAtividade?: boolean
       empregadosComprovados?: number
+      checklistManual?: ChecklistManualBool
       faturamentoMensal: LinhaFaturamentoMensal[]
       movimentacaoNcm: LinhaMovimentacaoNCM[]
       saidasGrupo: LinhaSaidasGrupoEconomico[]
@@ -61,6 +64,7 @@ export async function POST(req: NextRequest) {
       movimentacaoGTIN: movimentacaoGTIN ?? [],
       inicioAtividadeManual:  inicioAtividade       ?? false,
       empregadosComprovados:  empregadosComprovados ?? undefined,
+      checklistManual:        checklistManual       ?? undefined,
     })
 
     // 2. Gerar parecer offline (sem custo de API)

@@ -33,6 +33,18 @@ export interface LinhaMovimentacaoGTIN {
 }
 
 // ──────────────────────────────────────────
+// Checklist documental manual
+// ──────────────────────────────────────────
+
+export type ChaveChecklist =
+  | 'cnae' | 'requerimento' | 'contrato_social' | 'docs_socios' | 'imovel'
+  | 'comprovante_endereco' | 'ir_socios' | 'rais' | 'gfip' | 'contrato_contador'
+  | 'licenca_anvisa' | 'regularidade_fiscal' | 'regularidade_dief' | 'grupo_economico'
+
+/** Checklist documental — true = documento conferido e OK */
+export type ChecklistManualBool = Record<ChaveChecklist, boolean>
+
+// ──────────────────────────────────────────
 // Tipos do motor de regras
 // ──────────────────────────────────────────
 
@@ -96,6 +108,9 @@ export interface ResultadoAnalise {
 
   // Início de atividade marcado manualmente pelo auditor (credenciamento por 6 meses)
   inicio_atividade_manual?: boolean
+
+  // Checklist documental preenchido no formulário antes da análise
+  checklist_manual?: ChecklistManualBool
 
   // Dados mensais para geração de tabelas no PDF
   dados_mensais: DadosMensais[]

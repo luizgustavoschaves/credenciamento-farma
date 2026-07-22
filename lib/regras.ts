@@ -16,7 +16,26 @@ import {
   DetalheReq7,
   DetalheReq8,
   DadosMensais,
+  ChecklistManualBool,
 } from './types'
+
+// Descrições legíveis de cada documento (para motivos de indeferimento)
+const DESCRICAO_DOC: Record<string, string> = {
+  cnae:                'CNAE 4644-3/01 ou 4645-1/00 enquadrado',
+  requerimento:        'Requerimento do pedido (SEFAZ)',
+  contrato_social:     'Instrumento constitutivo (Contrato Social)',
+  docs_socios:         'Cédulas de identidade e CPF dos sócios',
+  imovel:              'Registro de imóvel ou contrato de locação',
+  comprovante_endereco:'Última conta de energia ou comprovante de endereço',
+  ir_socios:           'Três últimos IR dos sócios ou diretores',
+  rais:                'RAIS (Relação Anual de Informações Sociais)',
+  gfip:                'GFIP dos últimos 12 meses',
+  contrato_contador:   'Contrato do contador + DHP',
+  licenca_anvisa:      'Licença da ANVISA (autorização de funcionamento)',
+  regularidade_fiscal: 'Regularidade fiscal e cadastral',
+  regularidade_dief:   'Regularidade DIEF/GIA-ST',
+  grupo_economico:     'Declaração de grupo econômico',
+}
 import {
   isPrioritario,
   isTabela1,
@@ -274,8 +293,9 @@ export function executarAnalise(params: {
   movimentacaoGTIN: LinhaMovimentacaoGTIN[]
   inicioAtividadeManual?: boolean
   empregadosComprovados?: number
+  checklistManual?: ChecklistManualBool
 }): ResultadoAnalise {
-  const { cnpj, tipo, dataPedido, faturamentoMensal, movimentacaoNcm, saidasGrupo, movimentacaoGTIN, inicioAtividadeManual, empregadosComprovados } = params
+  const { cnpj, tipo, dataPedido, faturamentoMensal, movimentacaoNcm, saidasGrupo, movimentacaoGTIN, inicioAtividadeManual, empregadosComprovados, checklistManual } = params
 
   // Filtra apenas os 12 meses anteriores à data do pedido
   const periodo    = competencias12Meses(dataPedido)
@@ -303,6 +323,19 @@ export function executarAnalise(params: {
 
   // Consolidar conclusão
   const reprovados: string[] = []
+
+  // Verificar documentação (checklist manual)
+  if (checklistManual) {
+    const docsFaltando = (Object.entries(checklistManual) as [string, boolean][])
+      .filter(([, marcado]) => !marcado)
+      .map(([chave]) => DESCRICAO_DOC[chave] ?? chave)
+    if (docsFaltando.length > 0) {
+      reprovados.push(
+        `Documentação (Art. 2º da Portaria 410/2025): ${docsFaltando.length} item(ns) não apresentado(s) ou em desacordo — ` +
+        docsFaltando.join('; ')
+      )
+    }
+  }
 
   if (req4.resultado === 'reprovado') {
     reprovados.push(
@@ -345,6 +378,7 @@ export function executarAnalise(params: {
     conclusao: reprovados.length === 0 ? 'deferido' : 'indeferido',
     motivos_indeferimento: reprovados,
     inicio_atividade_manual: inicioAtividadeManual ?? false,
+    checklist_manual: checklistManual,
     dados_mensais: dadosMensais,
   }
 }

@@ -361,10 +361,19 @@ export default function AnalisePage() {
           ('cnae' in rj && 'checked' in (rj.cnae ?? {})) ||
           ('contrato_social' in rj && 'checked' in (rj.contrato_social ?? {}))
         ) {
-          // Mescla com o inicial para preencher chaves novas ausentes
           const inicial = checklistInicial()
           const merged = { ...inicial, ...rj } as ChecklistManual
           setChecklistDocs(merged)
+        }
+      } else if (pedido?.resultado_json) {
+        // Fallback: usar checklist_manual salvo no resultado_json (novo fluxo)
+        const cm = (pedido.resultado_json as any).checklist_manual as Record<string, boolean> | undefined
+        if (cm) {
+          const inicial = checklistInicial()
+          const fromResult = Object.fromEntries(
+            Object.entries(cm).map(([k, v]) => [k, { checked: v as boolean }])
+          ) as ChecklistManual
+          setChecklistDocs({ ...inicial, ...fromResult })
         }
       }
       setCarregando(false)
