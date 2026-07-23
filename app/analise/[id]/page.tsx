@@ -367,9 +367,9 @@ export default function AnalisePage() {
           const merged = { ...inicial, ...rj } as ChecklistManual
           setChecklistDocs(merged)
         }
-      } else if (pedido?.resultado_json) {
-        // Fallback: usar checklist_manual salvo no resultado_json (novo fluxo)
-        const cm = (pedido.resultado_json as any).checklist_manual as Record<string, boolean> | undefined
+      } else if (parecer?.resultado_json) {
+        // Fallback: usar checklist_manual salvo no resultado_json do parecer (novo fluxo)
+        const cm = (parecer.resultado_json as any).checklist_manual as Record<string, boolean> | undefined
         if (cm) {
           const inicial = checklistInicial()
           const fromResult = Object.fromEntries(
