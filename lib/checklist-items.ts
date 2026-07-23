@@ -12,6 +12,7 @@ export interface ItemChecklist {
   base: string
   chaveManual?: string
   reqCsv?: ReqCsv
+  link?: string   // URL de consulta externa (ex: ANVISA, CRC-MA)
 }
 
 export const ITENS_CHECKLIST: ItemChecklist[] = [
@@ -24,8 +25,8 @@ export const ITENS_CHECKLIST: ItemChecklist[] = [
   { num: 7,  descricao: 'Três últimos IR dos sócios ou diretores',                         base: 'Art. 2º, II, e',   chaveManual: 'ir_socios'           },
   { num: 8,  descricao: 'RAIS (Relação Anual de Informações Sociais)',                      base: 'Art. 2º, II, f',   chaveManual: 'rais'                },
   { num: 9,  descricao: 'GFIP dos últimos 12 meses',                                       base: 'Art. 2º, II, g',   chaveManual: 'gfip'                },
-  { num: 10, descricao: 'Contrato do contador + DHP',                                      base: 'Art. 2º, II, h',   chaveManual: 'contrato_contador'   },
-  { num: 11, descricao: 'Licença da ANVISA (autorização de funcionamento)',                 base: 'Art. 2º, II, i',   chaveManual: 'licenca_anvisa'      },
+  { num: 10, descricao: 'Contrato do contador + DHP',                                      base: 'Art. 2º, II, h',   chaveManual: 'contrato_contador',  link: 'https://servicos.crcma.org.br:444/spwMA/consultacadastral/Externa.aspx' },
+  { num: 11, descricao: 'Licença da ANVISA (autorização de funcionamento)',                 base: 'Art. 2º, II, i',   chaveManual: 'licenca_anvisa',     link: 'https://consultas.anvisa.gov.br/#/empresas/empresas/' },
   { num: 12, descricao: 'Regularidade fiscal e cadastral',                                 base: 'Art. 2º, I',       chaveManual: 'regularidade_fiscal' },
   { num: 13, descricao: 'Regularidade DIEF/GIA-ST',                                        base: 'Art. 3º, II',      chaveManual: 'regularidade_dief'   },
   { num: 14, descricao: 'Declaração de grupo econômico',                                   base: 'Art. 3º, §1º',     chaveManual: 'grupo_economico'     },

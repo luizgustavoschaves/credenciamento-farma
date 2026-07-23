@@ -829,7 +829,19 @@ export default function HomePage() {
                   <span className={`text-sm ${marcado ? 'text-green-700' : 'text-gray-700'}`}>
                     {item.descricao}
                   </span>
-                  {marcado && <span className="ml-auto text-green-500 text-sm flex-shrink-0">✓</span>}
+                  {item.link && (
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="ml-auto text-xs text-blue-600 hover:text-blue-800 hover:underline flex-shrink-0"
+                    >
+                      ↗ Consultar
+                    </a>
+                  )}
+                  {marcado && !item.link && <span className="ml-auto text-green-500 text-sm flex-shrink-0">✓</span>}
+                  {marcado && item.link && <span className="text-green-500 text-sm flex-shrink-0">✓</span>}
                 </label>
               )
             })}
