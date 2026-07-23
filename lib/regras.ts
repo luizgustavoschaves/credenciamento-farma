@@ -283,6 +283,47 @@ function calcularReq8(mediaFaturamentoMensal: number, empregadosComprovados?: nu
 // Função principal — executa todas as regras e consolida o resultado
 // ──────────────────────────────────────────────────────────────────────────────
 
+// Motivos sem valores fiscais — usados apenas no histórico
+function gerarMotivosResumo(
+  reprovados: string[],
+  req4: { resultado: string; detalhe: DetalheReq4 },
+  req8: { resultado: string },
+  checklistManual?: ChecklistManualBool,
+): string[] {
+  if (reprovados.length === 0) return []
+  const resumo: string[] = []
+
+  // Documentação (sem valores — apenas nomes dos documentos faltantes)
+  if (checklistManual) {
+    const NOMES: Record<string, string> = {
+      cnae: 'CNAE enquadrado', requerimento: 'Requerimento', contrato_social: 'Contrato Social',
+      docs_socios: 'Docs. dos sócios', imovel: 'Reg. de imóvel/locação',
+      comprovante_endereco: 'Comprovante de endereço', ir_socios: 'IR dos sócios',
+      rais: 'RAIS', gfip: 'GFIP', contrato_contador: 'Contrato do contador + DHP',
+      licenca_anvisa: 'Licença ANVISA', regularidade_fiscal: 'Regularidade fiscal',
+      regularidade_dief: 'DIEF/GIA-ST', grupo_economico: 'Decl. grupo econômico',
+    }
+    const faltando = (Object.entries(checklistManual) as [string, boolean][])
+      .filter(([, ok]) => !ok).map(([k]) => NOMES[k] ?? k)
+    if (faltando.length > 0)
+      resumo.push(`Documentação incompleta (Art. 2º): ${faltando.join(', ')}`)
+  }
+
+  // Requisitos numéricos — sem valores do contribuinte
+  if (req4.resultado === 'reprovado')
+    resumo.push(`Sequência de ${req4.detalhe.maior_sequencia} meses consecutivos com saídas inferiores às entradas (Art. 3º, III)`)
+  if (reprovados.some(m => m.startsWith('REQ-5')))
+    resumo.push('Faturamento mínimo não atingido (Art. 3º, IV)')
+  if (reprovados.some(m => m.startsWith('REQ-6')))
+    resumo.push('Percentual de itens prioritários abaixo do mínimo exigido (Art. 3º, VI)')
+  if (reprovados.some(m => m.startsWith('REQ-7')))
+    resumo.push('Percentual de agregação ao grupo econômico abaixo do mínimo exigido (Art. 3º, VII)')
+  if (req8.resultado === 'reprovado')
+    resumo.push('Quadro mínimo de funcionários não atendido (Art. 4º)')
+
+  return resumo
+}
+
 export function executarAnalise(params: {
   cnpj: string
   tipo: 'credenciamento' | 'renovacao'
@@ -377,6 +418,7 @@ export function executarAnalise(params: {
     req8,
     conclusao: reprovados.length === 0 ? 'deferido' : 'indeferido',
     motivos_indeferimento: reprovados,
+    motivos_resumo: gerarMotivosResumo(reprovados, req4, req8, checklistManual),
     inicio_atividade_manual: inicioAtividadeManual ?? false,
     checklist_manual: checklistManual,
     dados_mensais: dadosMensais,

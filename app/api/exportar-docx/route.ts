@@ -408,31 +408,20 @@ export async function GET(req: NextRequest) {
   if (!pedidoId)
     return NextResponse.json({ erro: 'id obrigatório' }, { status: 400 })
 
-  // Busca pedido
-  let pedido: any = null
-  {
-    const { data, error } = await supabase
-      .from('pedidos')
-      .select('cnpj, razao_social, tipo, numero_if, numero_processo, inscricao_estadual, resultado_json')
-      .eq('id', pedidoId)
-      .single()
-    if (!error) {
-      pedido = data
-    } else {
-      const { data: d2 } = await supabase
-        .from('pedidos')
-        .select('cnpj, razao_social, tipo, resultado_json')
-        .eq('id', pedidoId)
-        .single()
-      pedido = d2
-    }
-  }
+  // Busca pedido (apenas dados cadastrais — sem resultado_json)
+  const { data: pedido } = await supabase
+    .from('pedidos')
+    .select('cnpj, razao_social, tipo, numero_if, numero_processo, inscricao_estadual')
+    .eq('id', pedidoId)
+    .single()
+
   if (!pedido)
     return NextResponse.json({ erro: 'Pedido não encontrado' }, { status: 404 })
 
+  // resultado_json fica em pareceres (novo fluxo); fallback em pedidos (registros antigos)
   const { data: parecer } = await supabase
     .from('pareceres')
-    .select('texto_final, texto_gerado')
+    .select('texto_final, texto_gerado, resultado_json')
     .eq('pedido_id', pedidoId)
     .single()
 
@@ -443,7 +432,8 @@ export async function GET(req: NextRequest) {
     .single()
 
   const textoParecer = parecer?.texto_final || parecer?.texto_gerado || ''
-  const resultado    = pedido.resultado_json as ResultadoAnalise | null
+  // resultado_json em pareceres (novo fluxo) ou em pedidos (registros antigos)
+  const resultado = (parecer?.resultado_json ?? (pedido as any).resultado_json ?? null) as ResultadoAnalise | null
 
   // Checklist: prefere documentos_analise (atualização posterior), cai para checklist_manual do resultado
   const checklistBruto = (docAnalise?.resultado_json as Record<string, { checked: boolean }> | null)

@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
     const parecerGeradoPorIA = false
 
     // 3. Persistir no Supabase
+    // pedidos: apenas dados cadastrais + conclusão resumida (sem valores fiscais)
     const { data: pedido, error: errPedido } = await supabase
       .from('pedidos')
       .insert({
@@ -82,8 +83,9 @@ export async function POST(req: NextRequest) {
         numero_processo:    numeroProcesso     ?? null,
         data_pedido:        dataPedido         ?? null,
         tipo,
-        status: 'pendente',
-        resultado_json: resultado,
+        status:             'pendente',
+        conclusao:          resultado.conclusao,
+        motivos_resumo:     resultado.motivos_resumo,
       })
       .select('id')
       .single()
@@ -97,14 +99,16 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
+    // pareceres: recebe o resultado_json completo (necessário para exportar o docx)
     const { error: errParecer } = await supabase
       .from('pareceres')
       .insert({
-        pedido_id: pedido.id,
+        pedido_id:    pedido.id,
         texto_gerado: textoParecer,
-        texto_final: null,
-        auditor: null,
-        aprovado_em: null,
+        texto_final:  null,
+        auditor:      null,
+        aprovado_em:  null,
+        resultado_json: resultado,
       })
 
     if (errParecer) {

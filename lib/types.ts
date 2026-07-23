@@ -104,7 +104,8 @@ export interface ResultadoAnalise {
   req8: { resultado: 'aprovado' | 'reprovado' | 'informativo'; detalhe: DetalheReq8 }
 
   conclusao: 'deferido' | 'indeferido'
-  motivos_indeferimento: string[]
+  motivos_indeferimento: string[]   // com valores numéricos — uso interno/parecer
+  motivos_resumo: string[]          // sem valores fiscais — uso no histórico
 
   // Início de atividade marcado manualmente pelo auditor (credenciamento por 6 meses)
   inicio_atividade_manual?: boolean

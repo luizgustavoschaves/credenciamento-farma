@@ -328,13 +328,13 @@ export default function AnalisePage() {
     async function carregar() {
       const { data: pedido } = await supabase
         .from('pedidos')
-        .select('resultado_json, razao_social')
+        .select('razao_social')
         .eq('id', id)
         .single()
 
       const { data: parecer } = await supabase
         .from('pareceres')
-        .select('texto_gerado, texto_final, auditor, aprovado_em')
+        .select('texto_gerado, texto_final, auditor, aprovado_em, resultado_json')
         .eq('pedido_id', id)
         .single()
 
@@ -345,8 +345,10 @@ export default function AnalisePage() {
         .single()
 
       if (pedido) {
-        setResultado(pedido.resultado_json as ResultadoAnalise)
         setRazaoSocial(pedido.razao_social ?? '')
+      }
+      if (parecer?.resultado_json) {
+        setResultado(parecer.resultado_json as ResultadoAnalise)
       }
       if (parecer) {
         setParecerGerado(parecer.texto_gerado ?? '')
